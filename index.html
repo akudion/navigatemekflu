@@ -3,22 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Location Manager</title>
+    <title>Avanza Spatial Maps & Camera Tracker</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Firebase SDK (v9 Compatibility Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
     <style>
         #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        @keyframes pulse-ring { 0% { transform: scale(0.33); opacity: 0.8; } 80%, 100% { opacity: 0; } }
+        .user-location-pin { position: relative; }
+        .user-location-pin::before {
+            content: ''; position: absolute; top: -10px; left: -10px; width: 36px; height: 36px;
+            background-color: #0284c7; border-radius: 50%; animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
     </style>
 </head>
-<body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col">
+<body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
+
+    <!-- OVERLAY LAYAR TERKUNCI (Wajib Aktifkan GPS Realtime) -->
+    <div id="gpsLockOverlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-4 text-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 animate-bounce">
+                <i data-lucide="map-pin-off" id="lockIcon" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Akses Memerlukan Lokasi Realtime</h2>
+            <p class="text-sm text-slate-600 mb-6">
+                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi **Avanza Maps**.
+            </p>
+            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 mb-6 flex items-center justify-center gap-2">
+                <span id="gpsStatusDot" class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
+                <span id="gpsStatusMessage">Mencari lokasi presisi tinggi Anda...</span>
+            </div>
+            <button onclick="requestGPSPermission()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition shadow flex items-center justify-center gap-2">
+                <i data-lucide="navigation" class="w-4 h-4"></i>
+                Aktifkan GPS Presisi Tinggi
+            </button>
+        </div>
+    </div>
 
     <!-- Header Navbar -->
     <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md z-20">
@@ -28,18 +62,20 @@
             </div>
             <div>
                 <h1 class="font-bold text-lg leading-none">Avanza Spatial Maps</h1>
-                <p class="text-xs text-slate-400">Location & Asset Manager</p>
+                <p class="text-xs text-slate-400">Camera & GPS Tracker Active</p>
             </div>
         </div>
         <div class="flex items-center space-x-2">
-            <button onclick="exportJSON()" class="flex items-center space-x-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-md transition">
-                <i data-lucide="download" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">Ekspor JSON</span>
+            <!-- Tombol Buka Galeri Foto Pop-Up -->
+            <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md font-medium transition shadow">
+                <i data-lucide="images" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Galeri Foto</span>
+                <span id="photoBadge" class="bg-indigo-800 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span>
             </button>
-            <label class="flex items-center space-x-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-md cursor-pointer transition">
-                <i data-lucide="upload" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">Impor JSON</span>
-                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importJSON(event)">
+            <label class="flex items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
+                <i data-lucide="file-up" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Upload PDF Track</span>
+                <input type="file" id="uploadTrackFile" accept=".pdf, image/*" class="hidden" onchange="handleTrackUpload(event)">
             </label>
             <button onclick="openModal()" class="flex items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
@@ -48,42 +84,114 @@
         </div>
     </header>
 
+    <!-- Input Kamera Tersembunyi -->
+    <!-- Input Kamera Langsung (Memaksa Membuka Kamera Belakang) -->
+<input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleCameraCapture(event)">
+
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
-        
-        <!-- Sidebar Marker List -->
         <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-10 shadow-lg absolute md:relative h-full transition-all duration-300 transform -translate-x-full md:translate-x-0" id="sidebar">
+            <div id="gpsStatusPanel" class="p-3 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-900 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span class="font-medium">GPS Presisi Aktif</span>
+                </div>
+                <span id="gpsAccuracy" class="text-[10px] font-bold text-blue-700">Mencari...</span>
+            </div>
+
+            <!-- PANEL KONTROL KELOLA GPS TRACKING & KAMERA -->
+            <div class="p-4 bg-sky-50 border-b border-sky-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-sky-900 flex items-center gap-1">
+                        <i data-lucide="navigation-2" class="w-4 h-4 text-sky-600"></i> Kontrol GPS Tracking
+                    </span>
+                    <span id="timerDisplay" class="text-xs font-mono font-bold bg-sky-200 text-sky-800 px-2 py-0.5 rounded">00:00:00</span>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="recenterToUserLocation()" class="col-span-2 text-xs bg-sky-600 hover:bg-sky-700 text-white py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
+                        <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Tengahkan Posisi Saya
+                    </button>
+                    <!-- Tombol Ambil Foto Kamera -->
+                    <button onclick="triggerCamera()" class="col-span-2 text-xs bg-rose-600 hover:bg-rose-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow">
+                        <i data-lucide="camera" class="w-4 h-4"></i> Ambil Foto Sesuai Lokasi
+                    </button>
+                    <button id="toggleTrackBtn" onclick="toggleTrackingRecording()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
+                        <i data-lucide="play" class="w-3.5 h-3.5"></i> Mulai Track
+                    </button>
+                    <button onclick="resetTrackingPath()" class="text-xs border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 py-1.5 rounded font-medium flex items-center justify-center gap-1 transition">
+                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Track
+                    </button>
+                </div>
+
+                <button id="saveTrackBtn" onclick="saveCurrentTrack()" disabled class="w-full text-xs bg-slate-300 text-slate-500 py-1.5 rounded font-medium flex items-center justify-center gap-1 cursor-not-allowed transition">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan Rekaman Jalur (Cloud)
+                </button>
+            </div>
+
+            <div id="trackControlPanel" class="hidden p-4 bg-purple-50 border-b border-purple-200 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
+                        <i data-lucide="layers" class="w-4 h-4 text-purple-600"></i> Track Overlay
+                    </span>
+                    <button onclick="removeTrackOverlay()" class="text-xs text-red-600 hover:underline">Hapus</button>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-600 mb-1">Transparansi Denah</label>
+                    <input type="range" id="opacityRange" min="0" max="1" step="0.1" value="0.7" oninput="updateTrackOpacity(this.value)" class="w-full accent-purple-600 cursor-pointer">
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="fitTrackBounds()" class="flex-1 text-xs bg-purple-600 text-white py-1.5 rounded font-medium hover:bg-purple-700">Fokus Track</button>
+                    <button onclick="toggleAdjustMode()" id="adjustBtn" class="flex-1 text-xs border border-purple-300 bg-white text-purple-800 py-1.5 rounded font-medium hover:bg-purple-100">Atur Posisi</button>
+                </div>
+            </div>
+
             <div class="p-4 border-b border-slate-100 space-y-3">
                 <div class="relative">
                     <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
                     <input type="text" id="searchInput" placeholder="Cari nama lokasi..." oninput="renderList()" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
                 </div>
-                <div class="flex space-x-2">
-                    <select id="filterCategory" onchange="renderList()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg p-2 focus:outline-none">
-                        <option value="ALL">Semua Kategori</option>
-                        <option value="Cabang">Cabang</option>
-                        <option value="Pos Servis">Pos Servis</option>
-                        <option value="Mitra">Mitra</option>
-                        <option value="Lainnya">Lainnya</option>
-                    </select>
-                </div>
+                <select id="filterCategory" onchange="renderList()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg p-2 focus:outline-none">
+                    <option value="ALL">Semua Kategori</option>
+                    <option value="Cabang">Cabang</option>
+                    <option value="Pos Servis">Pos Servis</option>
+                    <option value="Mitra">Mitra</option>
+                    <option value="Lainnya">Lainnya</option>
+                </select>
             </div>
 
-            <!-- List Titik Spasial -->
-            <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-                <!-- Disisi melalui JavaScript -->
-            </div>
+            <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2"></div>
 
             <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
                 <span>Total Titik: <strong id="totalCount">0</strong></span>
-                <span class="text-emerald-600 flex items-center gap-1"><i data-lucide="database" class="w-3 h-3"></i> LocalStorage Active</span>
+                <span class="text-emerald-600 flex items-center gap-1"><i data-lucide="cloud" class="w-3 h-3"></i> Realtime DB</span>
             </div>
         </aside>
 
-        <!-- Map Container -->
         <main class="flex-1 relative">
             <div id="map"></div>
         </main>
+    </div>
+
+    <!-- MODAL POP-UP GALERI FOTO -->
+    <div id="galleryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="images" class="w-5 h-5 text-indigo-400"></i>
+                    <h3 class="font-semibold text-base">Galeri Foto Tangkapan</h3>
+                </div>
+                <button onclick="closeGalleryModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div id="galleryContainer" class="p-6 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                <!-- Item Foto Dijejalkan via Javascript -->
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 text-right">
+                <button onclick="closeGalleryModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-sm font-medium">Tutup Galeri</button>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Form Tambah/Edit Titik -->
@@ -136,43 +244,484 @@
         </div>
     </div>
 
-    <!-- Application Script -->
     <script>
-        let map;
-        let markersGroup;
-        let locations = JSON.parse(localStorage.getItem('avanza_locations')) || [
-            { id: '1', name: 'Avanza Central Hub', category: 'Cabang', lat: -6.2088, lng: 106.8456, color: '#2563eb', desc: 'Pusat operasi utama.' },
-            { id: '2', name: 'Pos Servis Barat', category: 'Pos Servis', lat: -6.1751, lng: 106.8272, color: '#16a34a', desc: 'Layanan servis berkala.' }
-        ];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        // Konfigurasi Firebase Realtime Database
+        const firebaseConfig = {
+          apiKey: "AIzaSyBntpxmb7jzuPVNFcXFAp95OyvwdhaIyIw",
+          authDomain: "avanza-maps.firebaseapp.com",
+          databaseURL: "https://avanza-maps-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "avanza-maps",
+          storageBucket: "avanza-maps.firebasestorage.app",
+          messagingSenderId: "382580006764",
+          appId: "1:382580006764:web:ed27ba303bb852d1ac9d49"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const rtdb = firebase.database();
+
+        let map, markersGroup, photoMarkersGroup;
+        let watchId = null, userMarker = null, userCircle = null, userPathLine = null, pathCoords = [];
+        let trackOverlay = null, trackBounds = null, nwMarker = null, seMarker = null, isAdjusting = false;
+        let locations = [];
+        let photos = [];
+        let isGpsUnlocked = false;
+
+        let isRecordingTrack = false;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let currentPos = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             initMap();
-            renderList();
+            listenCloudData();
+            listenCloudPhotos();
+            loadCloudTrackOverlay();
+            requestGPSPermission();
         });
 
-        function initMap() {
-            map = L.map('map').setView([-6.2088, 106.8456], 12);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; OpenStreetMap contributors'
-            }).addTo(map);
+        function triggerCamera() {
+            document.getElementById('cameraInput').click();
+        }
 
-            markersGroup = L.layerGroup().addTo(map);
+        function handleCameraCapture(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-            map.on('click', (e) => {
-                openModal(null, e.latlng.lat, e.latlng.lng);
+            if (!currentPos) {
+                alert("Gagal menyimpan foto: Koordinat GPS belum terdeteksi.");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoDataUrl = e.target.result;
+                const photoId = Date.now().toString();
+                
+                const newPhoto = {
+                    id: photoId,
+                    imageData: photoDataUrl,
+                    lat: currentPos[0],
+                    lng: currentPos[1],
+                    timestamp: new Date().toLocaleString('id-ID')
+                };
+
+                // Simpan Foto ke Cloud Realtime Database
+                rtdb.ref('captured_photos/' + photoId).set(newPhoto).then(() => {
+                    alert("Foto berhasil diambil dan disimpan ke Cloud!");
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function listenCloudPhotos() {
+            rtdb.ref('captured_photos').on('value', (snapshot) => {
+                photos = [];
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        photos.push({ id: key, ...data[key] });
+                    });
+                }
+                document.getElementById('photoBadge').innerText = photos.length;
+                renderPhotoMarkersOnMap();
+                renderGalleryGrid();
             });
+        }
 
-            renderMarkers();
+        function renderPhotoMarkersOnMap() {
+            photoMarkersGroup.clearLayers();
+            photos.forEach(photo => {
+                const photoIcon = L.divIcon({
+                    className: 'photo-pin',
+                    html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-md bg-cover bg-center overflow-hidden" style="background-image: url('${photo.imageData}');"></div>`,
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                });
+
+                const marker = L.marker([photo.lat, photo.lng], { icon: photoIcon });
+                marker.bindPopup(`
+                    <div class="p-1 max-w-[200px]">
+                        <img src="${photo.imageData}" class="w-full h-28 object-cover rounded mb-2">
+                        <p class="text-[10px] text-slate-500 mb-1">${photo.timestamp}</p>
+                        <div class="flex gap-2">
+                            <a href="${photo.imageData}" download="Foto_${photo.id}.jpg" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Download</a>
+                            <button onclick="deletePhoto('${photo.id}')" class="text-xs text-red-600 font-medium">Hapus</button>
+                        </div>
+                    </div>
+                `);
+                photoMarkersGroup.addLayer(marker);
+            });
+        }
+
+        function openGalleryModal() {
+            renderGalleryGrid();
+            document.getElementById('galleryModal').classList.remove('hidden');
+        }
+
+        function closeGalleryModal() {
+            document.getElementById('galleryModal').classList.add('hidden');
+        }
+
+        function renderGalleryGrid() {
+            const container = document.getElementById('galleryContainer');
+            container.innerHTML = '';
+
+            if (photos.length === 0) {
+                container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">Belum ada foto yang diambil.</div>`;
+                return;
+            }
+
+            photos.forEach(photo => {
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 rounded-lg border border-slate-200 overflow-hidden shadow-sm flex flex-col";
+                card.innerHTML = `
+                    <div class="h-40 bg-slate-200 overflow-hidden relative group">
+                        <img src="${photo.imageData}" class="w-full h-full object-cover">
+                        <button onclick="focusPhotoOnMap(${photo.lat}, ${photo.lng})" class="absolute top-2 right-2 bg-slate-900/80 text-white p-1.5 rounded-full hover:bg-slate-900 transition">
+                            <i data-lucide="crosshair" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="p-3 flex justify-between items-center bg-white border-t border-slate-100">
+                        <div>
+                            <p class="text-[11px] font-semibold text-slate-700">${photo.timestamp}</p>
+                            <p class="text-[10px] text-slate-400">${photo.lat.toFixed(5)}, ${photo.lng.toFixed(5)}</p>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <a href="${photo.imageData}" download="Foto_AvanzaMaps_${photo.id}.jpg" class="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition" title="Download Foto">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                            </a>
+                            <button onclick="deletePhoto('${photo.id}')" class="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition" title="Hapus Foto">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function focusPhotoOnMap(lat, lng) {
+            closeGalleryModal();
+            map.flyTo([lat, lng], 18);
+        }
+
+        function deletePhoto(photoId) {
+            if (confirm("Apakah Anda yakin ingin menghapus foto ini?")) {
+                rtdb.ref('captured_photos/' + photoId).remove();
+            }
+        }
+
+        function requestGPSPermission() {
+            const statusMsg = document.getElementById('gpsStatusMessage');
+            const statusDot = document.getElementById('gpsStatusDot');
+            
+            if (!("geolocation" in navigator)) {
+                statusMsg.innerText = "Browser Anda tidak mendukung Geolocation GPS.";
+                statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+                return;
+            }
+
+            statusMsg.innerText = "Mengunci sinyal GPS presisi tinggi (target ≤ 5 meter)...";
+            statusDot.className = "w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping";
+
+            const geoOptions = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    currentPos = [lat, lng];
+
+                    document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
+
+                    if (!isGpsUnlocked) {
+                        isGpsUnlocked = true;
+                        document.getElementById('gpsLockOverlay').classList.add('hidden');
+                        map.setView([lat, lng], 18);
+                    }
+
+                    if (isRecordingTrack) {
+                        if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
+                            pathCoords.push([lat, lng]);
+                            userPathLine.setLatLngs(pathCoords);
+                        }
+                    }
+
+                    if (userMarker) map.removeLayer(userMarker);
+                    if (userCircle) map.removeLayer(userCircle);
+
+                    userMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'user-location-pin',
+                            html: `<div style="background-color: #0284c7; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;"></div>`,
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
+                        })
+                    }).addTo(map);
+
+                    userCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: '#0284c7',
+                        fillColor: '#38bdf8',
+                        fillOpacity: 0.15,
+                        weight: 1
+                    }).addTo(map);
+                },
+                (error) => {
+                    isGpsUnlocked = false;
+                    document.getElementById('gpsLockOverlay').classList.remove('hidden');
+                    statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            statusMsg.innerText = "Akses ditolak. Izinkan lokasi presisi di browser untuk melanjutkan.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            statusMsg.innerText = "Sinyal GPS lemah/tidak ditemukan. Pastikan GPS HP/Laptop aktif.";
+                            break;
+                        case error.TIMEOUT:
+                            statusMsg.innerText = "Mencari GPS presisi tinggi butuh waktu lebih lama. Coba klik lagi.";
+                            break;
+                        default:
+                            statusMsg.innerText = "Gagal melacak lokasi realtime.";
+                    }
+                },
+                geoOptions
+            );
+        }
+
+        function recenterToUserLocation() {
+            if (currentPos) {
+                map.flyTo(currentPos, 18, { animate: true, duration: 1.5 });
+            } else {
+                alert("Posisi GPS belum terdeteksi.");
+            }
+        }
+
+        function toggleTrackingRecording() {
+            const btn = document.getElementById('toggleTrackBtn');
+            const saveBtn = document.getElementById('saveTrackBtn');
+
+            if (!isRecordingTrack) {
+                isRecordingTrack = true;
+                btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i> Berhenti Track`;
+                btn.classList.replace('bg-emerald-600', 'bg-red-600');
+                btn.classList.replace('hover:bg-emerald-700', 'hover:bg-red-700');
+
+                timerInterval = setInterval(() => {
+                    secondsElapsed++;
+                    document.getElementById('timerDisplay').innerText = formatTimer(secondsElapsed);
+                }, 1000);
+
+            } else {
+                isRecordingTrack = false;
+                clearInterval(timerInterval);
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> Lanjut Track`;
+                btn.classList.replace('bg-red-600', 'bg-emerald-600');
+                btn.classList.replace('hover:bg-red-700', 'hover:bg-emerald-700');
+
+                if (pathCoords.length > 0) {
+                    saveBtn.disabled = false;
+                    saveBtn.classList.replace('bg-slate-300', 'bg-emerald-600');
+                    saveBtn.classList.replace('text-slate-500', 'text-white');
+                    saveBtn.classList.replace('cursor-not-allowed', 'hover:bg-emerald-700');
+                }
+            }
+            lucide.createIcons();
+        }
+
+        function formatTimer(totalSeconds) {
+            const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const secs = String(totalSeconds % 60).padStart(2, '0');
+            return `${hrs}:${mins}:${secs}`;
+        }
+
+        function resetTrackingPath() {
+            if (confirm("Reset seluruh lintasan tracking dan timer?")) {
+                isRecordingTrack = false;
+                clearInterval(timerInterval);
+                secondsElapsed = 0;
+                pathCoords = [];
+                if (userPathLine) userPathLine.setLatLngs([]);
+                
+                document.getElementById('timerDisplay').innerText = "00:00:00";
+                
+                const btn = document.getElementById('toggleTrackBtn');
+                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> Mulai Track`;
+                btn.className = "text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm";
+
+                const saveBtn = document.getElementById('saveTrackBtn');
+                saveBtn.disabled = true;
+                saveBtn.className = "w-full text-xs bg-slate-300 text-slate-500 py-1.5 rounded font-medium flex items-center justify-center gap-1 cursor-not-allowed transition";
+                lucide.createIcons();
+            }
+        }
+
+        function saveCurrentTrack() {
+            if (pathCoords.length === 0) {
+                alert("Tidak ada lintasan koordinat yang bisa disimpan.");
+                return;
+            }
+
+            const trackName = prompt("Masukkan nama rekaman lintasan ini:", `Track - ${new Date().toLocaleString('id-ID')}`);
+            if (!trackName) return;
+
+            const trackId = Date.now().toString();
+            const trackData = {
+                name: trackName,
+                duration: formatTimer(secondsElapsed),
+                totalSeconds: secondsElapsed,
+                coordinates: pathCoords,
+                savedAt: new Date().toISOString()
+            };
+
+            rtdb.ref('saved_tracks/' + trackId).set(trackData).then(() => {
+                alert(`Lintasan "${trackName}" berhasil disimpan ke Cloud!\nDurasi: ${formatTimer(secondsElapsed)}`);
+            }).catch((err) => {
+                alert("Gagal menyimpan ke Cloud: " + err.message);
+            });
+        }
+
+        function getDistance(p1, p2) {
+            const R = 6371000;
+            const dLat = (p2[0] - p1[0]) * Math.PI / 180;
+            const dLng = (p2[1] - p1[1]) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        function initMap() {
+            map = L.map('map').setView([-6.2088, 106.8456], 13);
+            const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
+            const googleHybrid = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] });
+            googleStreets.addTo(map);
+
+            L.control.layers({ "Google Maps (Peta Jalan)": googleStreets, "Google Maps (Satelit)": googleHybrid }).addTo(map);
+            markersGroup = L.layerGroup().addTo(map);
+            photoMarkersGroup = L.layerGroup().addTo(map);
+            
+            userPathLine = L.polyline([], { color: '#0284c7', weight: 5, opacity: 0.85, lineJoin: 'round' }).addTo(map);
+
+            map.on('click', (e) => { if (!isAdjusting) openModal(null, e.latlng.lat, e.latlng.lng); });
+        }
+
+        function listenCloudData() {
+            rtdb.ref('locations').on('value', (snapshot) => {
+                locations = [];
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        locations.push({ id: key, ...data[key] });
+                    });
+                }
+                renderMarkers();
+                renderList();
+            });
+        }
+
+        async function handleTrackUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.type === "application/pdf") {
+                const fileReader = new FileReader();
+                fileReader.onload = async function () {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    const page = await pdf.getPage(1);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height; canvas.width = viewport.width;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    displayTrackOverlay(canvas.toDataURL('image/png'));
+                };
+                fileReader.readAsArrayBuffer(file);
+            } else if (file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = function (e) { displayTrackOverlay(e.target.result); };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function displayTrackOverlay(imageUrl, savedBounds = null) {
+            removeTrackOverlay(false);
+            if (savedBounds) {
+                trackBounds = savedBounds;
+            } else {
+                const center = map.getCenter();
+                trackBounds = [[center.lat - 0.005, center.lng - 0.008], [center.lat + 0.005, center.lng + 0.008]];
+            }
+            trackOverlay = L.imageOverlay(imageUrl, trackBounds, { opacity: 0.7, interactive: true }).addTo(map);
+            document.getElementById('trackControlPanel').classList.remove('hidden');
+            fitTrackBounds();
+
+            rtdb.ref('track_overlay').set({ imageUrl: imageUrl, bounds: trackBounds });
+        }
+
+        function loadCloudTrackOverlay() {
+            rtdb.ref('track_overlay').once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.imageUrl && data.bounds) {
+                    displayTrackOverlay(data.imageUrl, data.bounds);
+                }
+            });
+        }
+
+        function updateTrackOpacity(val) { if (trackOverlay) trackOverlay.setOpacity(val); }
+        function fitTrackBounds() { if (trackBounds) map.fitBounds(trackBounds); }
+
+        function toggleAdjustMode() {
+            isAdjusting = !isAdjusting;
+            const btn = document.getElementById('adjustBtn');
+            if (isAdjusting) {
+                btn.innerText = "Selesai Atur";
+                btn.classList.replace("bg-white", "bg-purple-700"); btn.classList.replace("text-purple-800", "text-white");
+                const bounds = trackOverlay.getBounds();
+                nwMarker = L.marker([bounds.getNorthEast().lat, bounds.getSouthWest().lng], { draggable: true, icon: createControlPin('#a855f7') }).addTo(map);
+                seMarker = L.marker([bounds.getSouthWest().lat, bounds.getNorthEast().lng], { draggable: true, icon: createControlPin('#a855f7') }).addTo(map);
+
+                const updateBounds = () => {
+                    const p1 = nwMarker.getLatLng(), p2 = seMarker.getLatLng();
+                    trackBounds = [[Math.min(p1.lat, p2.lat), Math.min(p1.lng, p2.lng)], [Math.max(p1.lat, p2.lat), Math.max(p1.lng, p2.lng)]];
+                    trackOverlay.setBounds(trackBounds);
+                    rtdb.ref('track_overlay').update({ bounds: trackBounds });
+                };
+                nwMarker.on('drag', updateBounds); seMarker.on('drag', updateBounds);
+            } else {
+                btn.innerText = "Atur Posisi";
+                btn.classList.replace("bg-purple-700", "bg-white"); btn.classList.replace("text-white", "text-purple-800");
+                if (nwMarker) map.removeLayer(nwMarker); if (seMarker) map.removeLayer(seMarker);
+            }
+        }
+
+        function removeTrackOverlay(clearCloud = true) {
+            if (trackOverlay) map.removeLayer(trackOverlay);
+            if (nwMarker) map.removeLayer(nwMarker);
+            if (seMarker) map.removeLayer(seMarker);
+            trackOverlay = null; isAdjusting = false;
+            document.getElementById('trackControlPanel').classList.add('hidden');
+            if (clearCloud) rtdb.ref('track_overlay').remove();
+        }
+
+        function createControlPin(color) {
+            return L.divIcon({ className: 'control-pin', html: `<div style="background-color: ${color}; width: 18px; height: 18px; border-radius: 50%; border: 3px solid white; cursor: move;"></div>`, iconSize: [18, 18], iconAnchor: [9, 9] });
         }
 
         function createCustomIcon(color) {
-            return L.divIcon({
-                className: 'custom-pin',
-                html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
-            });
+            return L.divIcon({ className: 'custom-pin', html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white;"></div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
         }
 
         function renderMarkers() {
@@ -182,17 +731,17 @@
                 marker.bindPopup(`
                     <div class="p-1">
                         <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${loc.color}">${loc.category}</span>
-                        <h4 class="font-bold text-sm mt-1 mb-0.5">${loc.name}</h4>
+                        <h4 class="font-bold text-sm mt-1">${loc.name}</h4>
                         <p class="text-xs text-slate-600 mb-2">${loc.desc || '-'}</p>
+                        <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="inline-block mb-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded font-medium">Buka di Google Maps</a>
                         <div class="flex space-x-2 pt-1 border-t border-slate-200">
-                            <button onclick="editLocation('${loc.id}')" class="text-xs text-blue-600 font-medium hover:underline">Edit</button>
-                            <button onclick="deleteLocation('${loc.id}')" class="text-xs text-red-600 font-medium hover:underline">Hapus</button>
+                            <button onclick="editLocation('${loc.id}')" class="text-xs text-blue-600 font-medium">Edit</button>
+                            <button onclick="deleteLocation('${loc.id}')" class="text-xs text-red-600 font-medium">Hapus</button>
                         </div>
                     </div>
                 `);
                 markersGroup.addLayer(marker);
             });
-            saveToStorage();
         }
 
         function renderList() {
@@ -202,25 +751,18 @@
             container.innerHTML = '';
 
             const filtered = locations.filter(loc => {
-                const matchSearch = loc.name.toLowerCase().includes(search) || (loc.desc && loc.desc.toLowerCase().includes(search));
-                const matchCat = category === 'ALL' || loc.category === category;
-                return matchSearch && matchCat;
+                return (loc.name.toLowerCase().includes(search) || (loc.desc && loc.desc.toLowerCase().includes(search))) && (category === 'ALL' || loc.category === category);
             });
 
             document.getElementById('totalCount').innerText = filtered.length;
-
             filtered.forEach(loc => {
                 const item = document.createElement('div');
-                item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition flex items-start justify-between group';
+                item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer flex items-start justify-between group';
                 item.onclick = () => map.flyTo([loc.lat, loc.lng], 15);
-
                 item.innerHTML = `
                     <div class="flex items-start space-x-2.5">
-                        <span class="w-3 h-3 rounded-full mt-1 flex-shrink-0" style="background-color: ${loc.color}"></span>
-                        <div>
-                            <h4 class="font-semibold text-xs text-slate-800">${loc.name}</h4>
-                            <p class="text-[10px] text-slate-500">${loc.category} • [${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}]</p>
-                        </div>
+                        <span class="w-3 h-3 rounded-full mt-1" style="background-color: ${loc.color}"></span>
+                        <div><h4 class="font-semibold text-xs text-slate-800">${loc.name}</h4><p class="text-[10px] text-slate-500">${loc.category}</p></div>
                     </div>
                     <div class="opacity-0 group-hover:opacity-100 transition flex space-x-1" onclick="event.stopPropagation()">
                         <button onclick="editLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
@@ -236,31 +778,24 @@
             document.getElementById('locationForm').reset();
             if (loc) {
                 document.getElementById('modalTitle').innerText = 'Edit Lokasi';
-                document.getElementById('locId').value = loc.id;
-                document.getElementById('locName').value = loc.name;
-                document.getElementById('locCategory').value = loc.category;
-                document.getElementById('locColor').value = loc.color;
-                document.getElementById('locLat').value = loc.lat;
-                document.getElementById('locLng').value = loc.lng;
+                document.getElementById('locId').value = loc.id; document.getElementById('locName').value = loc.name;
+                document.getElementById('locCategory').value = loc.category; document.getElementById('locColor').value = loc.color;
+                document.getElementById('locLat').value = loc.lat; document.getElementById('locLng').value = loc.lng;
                 document.getElementById('locDesc').value = loc.desc || '';
             } else {
                 document.getElementById('modalTitle').innerText = 'Tambah Lokasi Baru';
-                document.getElementById('locId').value = '';
-                document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
+                document.getElementById('locId').value = ''; document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
                 document.getElementById('locLng').value = lng ? lng.toFixed(6) : '';
             }
             document.getElementById('locationModal').classList.remove('hidden');
         }
 
-        function closeModal() {
-            document.getElementById('locationModal').classList.add('hidden');
-        }
+        function closeModal() { document.getElementById('locationModal').classList.add('hidden'); }
 
         function saveLocation(e) {
             e.preventDefault();
             const id = document.getElementById('locId').value || Date.now().toString();
             const newLoc = {
-                id: id,
                 name: document.getElementById('locName').value,
                 category: document.getElementById('locCategory').value,
                 color: document.getElementById('locColor').value,
@@ -269,16 +804,7 @@
                 desc: document.getElementById('locDesc').value
             };
 
-            const index = locations.findIndex(l => l.id === id);
-            if (index > -1) {
-                locations[index] = newLoc;
-            } else {
-                locations.push(newLoc);
-            }
-
-            renderMarkers();
-            renderList();
-            closeModal();
+            rtdb.ref('locations/' + id).set(newLoc).then(() => closeModal());
         }
 
         function editLocation(id) {
@@ -287,43 +813,9 @@
         }
 
         function deleteLocation(id) {
-            if (confirm('Apakah Anda yakin ingin menghapus titik lokasi ini?')) {
-                locations = locations.filter(l => l.id !== id);
-                renderMarkers();
-                renderList();
+            if (confirm('Hapus titik lokasi ini?')) {
+                rtdb.ref('locations/' + id).remove();
             }
-        }
-
-        function saveToStorage() {
-            localStorage.setItem('avanza_locations', JSON.stringify(locations));
-        }
-
-        function exportJSON() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(locations, null, 2));
-            const downloadAnchor = document.createElement('a');
-            downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", "avanza_maps_data.json");
-            document.body.appendChild(downloadAnchor);
-            downloadAnchor.click();
-            downloadAnchor.remove();
-        }
-
-        function importJSON(event) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    if (Array.isArray(importedData)) {
-                        locations = importedData;
-                        renderMarkers();
-                        renderList();
-                        alert('Data lokasi berhasil diimpor!');
-                    }
-                } catch (err) {
-                    alert('Format file JSON tidak valid.');
-                }
-            };
-            reader.readAsText(event.target.files[0]);
         }
     </script>
 </body>
