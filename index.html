@@ -53,7 +53,7 @@
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
                 <i data-lucide="user" class="w-8 h-8"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Selamat Datang di Maps Praktikum</h2>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Selamat Datang di Avanza Maps</h2>
             <p class="text-sm text-slate-600 mb-6">Silakan masukkan nama Anda untuk melanjutkan ke peta:</p>
             <form onsubmit="submitUserName(event)" class="space-y-4">
                 <input type="text" id="inputUserName" required placeholder="Contoh: Budi Santoso" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-medium">
@@ -338,6 +338,9 @@
         let navLine = null; 
         let isNavLineActive = false; 
 
+        // Deklarasi Global Layer Peta
+        let googleStreets, satelliteLayer;
+
         let trackOverlay = null, trackBounds = null, nwMarker = null, seMarker = null, isAdjusting = false;
         let locations = [];
         let photos = [];
@@ -375,24 +378,33 @@
                 bearing: 0
             }).setView([-6.2088, 106.8456], 13);
 
-            const googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
+            googleStreets = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
                 maxZoom: 20, 
                 subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] 
             });
 
-            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 maxZoom: 19,
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                attribution: 'Tiles &copy; Esri'
             });
 
             googleStreets.addTo(map);
 
-            const baseMaps = {
-                "Peta Jalan (Streets)": googleStreets,
-                "Peta Satelit (Satellite)": satelliteLayer
-            };
-
-            L.control.layers(baseMaps).addTo(map);
+            // Tombol Kustom Ganti Satelit yang Dijamin Muncul & Anti-Hilang
+            const MapSwitchControl = L.Control.extend({
+                options: { position: 'topright' },
+                onAdd: function () {
+                    const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
+                    container.innerHTML = `
+                        <button id="mapSwitchBtn" onclick="toggleMapLayer()" style="background: white; border: 2px solid rgba(0,0,0,0.2); padding: 6px 10px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,0.4); color: #1e293b; display: flex; align-items: center; gap: 4px;" title="Ubah Mode Peta">
+                            <i data-lucide="layers" style="width: 14px; height: 14px;"></i> <span>Satelit: OFF</span>
+                        </button>
+                    `;
+                    L.DomEvent.disableClickPropagation(container);
+                    return container;
+                }
+            });
+            map.addControl(new MapSwitchControl());
 
             markersGroup = L.layerGroup().addTo(map);
             photoMarkersGroup = L.layerGroup().addTo(map);
@@ -411,6 +423,29 @@
                     openModal(null, e.latlng.lat, e.latlng.lng); 
                 }
             });
+
+            setTimeout(() => { lucide.createIcons(); }, 100);
+        }
+
+        let isSatelliteActive = false;
+        function toggleMapLayer() {
+            const btn = document.getElementById('mapSwitchBtn');
+            if (!isSatelliteActive) {
+                map.removeLayer(googleStreets);
+                satelliteLayer.addTo(map);
+                isSatelliteActive = true;
+                btn.innerHTML = `<i data-lucide="layers" style="width: 14px; height: 14px;"></i> <span>Satelit: ON</span>`;
+                btn.style.background = "#0f172a";
+                btn.style.color = "#ffffff";
+            } else {
+                map.removeLayer(satelliteLayer);
+                googleStreets.addTo(map);
+                isSatelliteActive = false;
+                btn.innerHTML = `<i data-lucide="layers" style="width: 14px; height: 14px;"></i> <span>Satelit: OFF</span>`;
+                btn.style.background = "#ffffff";
+                btn.style.color = "#1e293b";
+            }
+            lucide.createIcons();
         }
 
         function startNavigation(name, lat, lng) {
