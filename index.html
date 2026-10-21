@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Live Compass</title>
+    <title>Avanza Spatial Maps & Ultra-Responsive Live Compass</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -59,7 +59,7 @@
             </div>
             <h2 class="text-xl font-bold text-slate-800 mb-2">Akses Memerlukan Lokasi Realtime</h2>
             <p class="text-sm text-slate-600 mb-6">
-                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi[cite: 1].
+                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi.
             </p>
             <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 mb-6 flex items-center justify-center gap-2">
                 <span id="gpsStatusDot" class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
@@ -72,17 +72,18 @@
         </div>
     </div>
 
-    <!-- PANEL NAVIGASI KOMPAS SENSITIF -->
+    <!-- PANEL NAVIGASI KOMPAS HIGH-RESPONSIVE -->
     <div id="compassNavPanel" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl z-[400] flex items-center gap-6 border border-slate-700 max-w-sm w-full mx-auto">
         <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
-            <!-- Panah Kompas Mengikuti Arah HP Tanpa Delay -->
-            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center" style="transition: transform 0.05s ease-out;">
-                <i data-lucide="navigation" class="w-8 h-8 text-emerald-400 fill-emerald-400"></i>
+            <!-- Panah Kompas Mulus Mengikuti Pergerakan HP secara Murni -->
+            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center">
+                <i data-lucide="navigation" class="w-8 h-8 text-emerald-400 fill-emerald-400 drop-shadow"></i>
             </div>
+            <span id="compassDegrees" class="text-[9px] font-mono font-bold text-slate-300 absolute bottom-1 bg-slate-900/80 px-1 rounded">0°</span>
         </div>
         <div class="flex-1 overflow-hidden">
             <div class="flex justify-between items-start">
-                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Kompas Aktif</span>
+                <span id="navModeBadge" class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Kompas Sensor HP</span>
                 <button onclick="stopCompassNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <h4 id="navTargetName" class="font-bold text-sm truncate text-white mt-0.5">-</h4>
@@ -330,9 +331,13 @@
         let timerInterval = null;
         let secondsElapsed = 0;
         let currentPos = null;
+        let previousPos = null;
 
         let activeNavTarget = null; 
         let userHeading = 0; 
+        let targetRotation = 0;
+        let currentRotation = 0;
+        let isHardwareCompassActive = false;
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -341,42 +346,39 @@
             listenCloudPhotos();
             listenOnlineUsers();
             loadCloudTrackOverlay();
+            requestAnimationFrame(smoothCompassAnimationLoop);
         });
 
-        // 1. SISTEM PERMINTAAN IZIN SENSOR KOMPAS (Khusus iOS 13+ & Android Modern)
+        // 1. KOMPAS SENSOR DENGAN ANIMASI INTERPOLASI MULUS (SMOOTHING LOOP)
         function requestCompassPermissionAndStart(name, lat, lng) {
+            startCompassNavigation(name, lat, lng);
+
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 DeviceOrientationEvent.requestPermission().then(response => {
                     if (response === 'granted') {
                         window.addEventListener('deviceorientation', handleOrientation, true);
-                        startCompassNavigation(name, lat, lng);
-                    } else {
-                        alert("Izin sensor kompas ditolak oleh browser.");
                     }
-                }).catch(err => {
-                    alert("Gagal mengaktifkan sensor orientasi: " + err);
-                });
+                }).catch(() => {});
             } else {
-                // Untuk Android / Browser standar yang tidak butuh permission manual
                 window.addEventListener('deviceorientationabsolute', handleOrientation, true);
                 window.addEventListener('deviceorientation', handleOrientation, true);
-                startCompassNavigation(name, lat, lng);
             }
         }
 
         function handleOrientation(event) {
             let heading = null;
-            
-            // Deteksi arah kompas berdasarkan platform perangkat
             if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
-                heading = event.webkitCompassHeading; // iOS Safari
+                heading = event.webkitCompassHeading;
             } else if (event.alpha !== null && event.alpha !== undefined) {
-                heading = 360 - event.alpha; // Android Chrome (Standard alpha)
+                heading = 360 - event.alpha;
             }
 
             if (heading !== null) {
+                isHardwareCompassActive = true;
                 userHeading = heading;
-                updateCompassUI();
+                document.getElementById('navModeBadge').innerText = "Kompas Sensor HP";
+                document.getElementById('compassDegrees').innerText = `${Math.round(userHeading)}°`;
+                updateCompassTarget();
             }
         }
 
@@ -384,17 +386,17 @@
             activeNavTarget = { name, lat, lng };
             document.getElementById('navTargetName').innerText = name;
             document.getElementById('compassNavPanel').classList.remove('hidden');
-            updateCompassUI();
+            updateCompassTarget();
         }
 
         function stopCompassNavigation() {
             activeNavTarget = null;
             document.getElementById('compassNavPanel').classList.add('hidden');
             window.removeEventListener('deviceorientation', handleOrientation, true);
+            window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
         }
 
-        // 2. Kalkulasi Sudut Rotasi Panah Kompas
-        function updateCompassUI() {
+        function updateCompassTarget() {
             if (!activeNavTarget || !currentPos) return;
 
             const p1Lat = currentPos[0];
@@ -415,8 +417,23 @@
             let bearing = Math.atan2(y, x) * 180 / Math.PI;
             bearing = (bearing + 360) % 360;
 
-            let rotationAngle = bearing - userHeading;
-            document.getElementById('compassArrow').style.transform = `rotate(${rotationAngle}deg)`;
+            targetRotation = bearing - userHeading;
+        }
+
+        function smoothCompassAnimationLoop() {
+            if (activeNavTarget) {
+                let diff = targetRotation - currentRotation;
+                if (diff > 180) diff -= 360;
+                if (diff < -180) diff += 360;
+
+                currentRotation += diff * 0.2;
+
+                const arrow = document.getElementById('compassArrow');
+                if (arrow) {
+                    arrow.style.transform = `rotate(${currentRotation}deg)`;
+                }
+            }
+            requestAnimationFrame(smoothCompassAnimationLoop);
         }
 
         function toggleSidebar() {
@@ -461,7 +478,22 @@
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     const accuracy = position.coords.accuracy;
+
+                    if (currentPos && (currentPos[0] !== lat || currentPos[1] !== lng)) {
+                        previousPos = currentPos;
+                    }
                     currentPos = [lat, lng];
+
+                    if (!isHardwareCompassActive && previousPos && getDistance(previousPos, currentPos) > 0.5) {
+                        const dLng = (currentPos[1] - previousPos[1]) * Math.PI / 180;
+                        const lat1Rad = previousPos[0] * Math.PI / 180;
+                        const lat2Rad = currentPos[0] * Math.PI / 180;
+                        const y = Math.sin(dLng) * Math.cos(lat2Rad);
+                        const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+                        userHeading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+                        document.getElementById('navModeBadge').innerText = "Kompas Gerakan GPS";
+                        document.getElementById('compassDegrees').innerText = `${Math.round(userHeading)}°`;
+                    }
 
                     document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
 
@@ -485,7 +517,7 @@
                     });
 
                     if (activeNavTarget) {
-                        updateCompassUI();
+                        updateCompassTarget();
                     }
 
                     if (isRecordingTrack) {
@@ -1076,7 +1108,7 @@
             } else {
                 document.getElementById('modalTitle').innerText = 'Tambah Lokasi Baru';
                 document.getElementById('locId').value = ''; document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
-                document.getElementById('locLng').value = lng ? lng.getToken(6) : '';
+                document.getElementById('locLng').value = lng ? lng.toFixed(6) : '';
             }
             document.getElementById('locationModal').classList.remove('hidden');
         }
@@ -1100,7 +1132,6 @@
         }
 
         function editLocation(id) {
-            if (-1) // dummy check
             if (!isAdminLoggedIn) return;
             const loc = locations.find(l => l.id === id);
             if (loc) openModal(loc);
