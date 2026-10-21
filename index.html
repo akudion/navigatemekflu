@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Ultra-Responsive Live Compass</title>
+    <title>Avanza Spatial Maps & Rotating Map Navigation</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -20,7 +20,7 @@
 
     <style>
         header { position: sticky; top: 0; z-index: 1000; }
-        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
+        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; transition: transform 0.1s ease-out; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -29,6 +29,13 @@
         .user-location-pin::before {
             content: ''; position: absolute; top: -10px; left: -10px; width: 36px; height: 36px;
             background-color: var(--pin-color, #0284c7); border-radius: 50%; animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        /* OPTIMASI HARDWARE ACCELERATION UNTUK PETA BERPUTAR & PANAH */
+        #compassArrow, #map {
+            will-change: transform;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
         }
     </style>
 </head>
@@ -72,10 +79,10 @@
         </div>
     </div>
 
-    <!-- PANEL NAVIGASI KOMPAS HIGH-RESPONSIVE -->
+    <!-- PANEL NAVIGASI KOMPAS HIGH-RESPONSIVE & ROTATING MAP -->
     <div id="compassNavPanel" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl z-[400] flex items-center gap-6 border border-slate-700 max-w-sm w-full mx-auto">
         <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
-            <!-- Panah Kompas Mulus Mengikuti Pergerakan HP secara Murni -->
+            <!-- Panah Kompas Tanpa Delay -->
             <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center">
                 <i data-lucide="navigation" class="w-8 h-8 text-emerald-400 fill-emerald-400 drop-shadow"></i>
             </div>
@@ -83,7 +90,7 @@
         </div>
         <div class="flex-1 overflow-hidden">
             <div class="flex justify-between items-start">
-                <span id="navModeBadge" class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Kompas Sensor HP</span>
+                <span id="navModeBadge" class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Kompas + Peta Berputar</span>
                 <button onclick="stopCompassNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <h4 id="navTargetName" class="font-bold text-sm truncate text-white mt-0.5">-</h4>
@@ -223,7 +230,7 @@
         </aside>
 
         <!-- Peta Utama -->
-        <main class="flex-1 relative">
+        <main class="flex-1 relative overflow-hidden">
             <div id="map"></div>
         </main>
     </div>
@@ -337,6 +344,8 @@
         let userHeading = 0; 
         let targetRotation = 0;
         let currentRotation = 0;
+        let mapRotation = 0;
+        let targetMapRotation = 0;
         let isHardwareCompassActive = false;
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -346,10 +355,10 @@
             listenCloudPhotos();
             listenOnlineUsers();
             loadCloudTrackOverlay();
-            requestAnimationFrame(smoothCompassAnimationLoop);
+            requestAnimationFrame(fastSmoothCompassAnimationLoop);
         });
 
-        // 1. KOMPAS SENSOR DENGAN ANIMASI INTERPOLASI MULUS (SMOOTHING LOOP)
+        // 1. SISTEM NAVIGASI: PETA DAN PANAH BERPUTAR KONSISTEN DENGAN GERAKAN HP
         function requestCompassPermissionAndStart(name, lat, lng) {
             startCompassNavigation(name, lat, lng);
 
@@ -376,7 +385,7 @@
             if (heading !== null) {
                 isHardwareCompassActive = true;
                 userHeading = heading;
-                document.getElementById('navModeBadge').innerText = "Kompas Sensor HP";
+                document.getElementById('navModeBadge').innerText = "Kompas + Peta Berputar";
                 document.getElementById('compassDegrees').innerText = `${Math.round(userHeading)}°`;
                 updateCompassTarget();
             }
@@ -386,6 +395,10 @@
             activeNavTarget = { name, lat, lng };
             document.getElementById('navTargetName').innerText = name;
             document.getElementById('compassNavPanel').classList.remove('hidden');
+            
+            if (currentPos) {
+                map.flyTo(currentPos, 18, { animate: true, duration: 1 });
+            }
             updateCompassTarget();
         }
 
@@ -394,6 +407,14 @@
             document.getElementById('compassNavPanel').classList.add('hidden');
             window.removeEventListener('deviceorientation', handleOrientation, true);
             window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
+
+            // Kembalikan rotasi peta ke posisi tegak semula (0 derajat)
+            const mapContainer = document.getElementById('map');
+            if (mapContainer) {
+                mapContainer.style.transform = `rotate(0deg) scale(1)`;
+            }
+            targetMapRotation = 0;
+            mapRotation = 0;
         }
 
         function updateCompassTarget() {
@@ -418,22 +439,36 @@
             bearing = (bearing + 360) % 360;
 
             targetRotation = bearing - userHeading;
+            targetMapRotation = -userHeading; // Peta berputar berlawanan dengan arah jarum jam HP
         }
 
-        function smoothCompassAnimationLoop() {
+        // SMOOTH ANIMATION LOOP: MEMUTAR PANAH DENGAN CEPAT & MEMUTAR CONTAINER PETA PADA SAAT BERSAMAAN
+        function fastSmoothCompassAnimationLoop() {
             if (activeNavTarget) {
-                let diff = targetRotation - currentRotation;
-                if (diff > 180) diff -= 360;
-                if (diff < -180) diff += 360;
-
-                currentRotation += diff * 0.2;
+                // Rotasi Panah Kompas
+                let diffArrow = targetRotation - currentRotation;
+                if (diffArrow > 180) diffArrow -= 360;
+                if (diffArrow < -180) diffArrow += 360;
+                currentRotation += diffArrow * 0.6;
 
                 const arrow = document.getElementById('compassArrow');
                 if (arrow) {
-                    arrow.style.transform = `rotate(${currentRotation}deg)`;
+                    arrow.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
+                }
+
+                // Rotasi Kontainer Peta Leaflet
+                let diffMap = targetMapRotation - mapRotation;
+                if (diffMap > 180) diffMap -= 360;
+                if (diffMap < -180) diffMap += 360;
+                mapRotation += diffMap * 0.6;
+
+                const mapContainer = document.getElementById('map');
+                if (mapContainer) {
+                    // Skala 1.25 digunakan agar sudut peta tidak kosong terpotong di layar saat diputar
+                    mapContainer.style.transform = `rotate(${mapRotation}deg) scale(1.25) translateZ(0)`;
                 }
             }
-            requestAnimationFrame(smoothCompassAnimationLoop);
+            requestAnimationFrame(fastSmoothCompassAnimationLoop);
         }
 
         function toggleSidebar() {
@@ -518,6 +553,7 @@
 
                     if (activeNavTarget) {
                         updateCompassTarget();
+                        map.panTo([lat, lng], { animate: true, duration: 0.5 });
                     }
 
                     if (isRecordingTrack) {
