@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Avanza Spatial Maps & Simple Map-Synced Navigation</title>
+    <title>Avanza Spatial Maps & Corrected Navigation</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -77,7 +77,7 @@
         </div>
     </div>
 
-    <!-- PANEL NAVIGASI SIMPLE (Sinkron dengan Rotasi Peta) -->
+    <!-- PANEL NAVIGASI SIMPLE (Presisi Mengarah ke Tujuan) -->
     <div id="compassNavPanel" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl z-[400] flex items-center gap-6 border border-slate-700 max-w-sm w-full mx-auto">
         <div class="relative w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
             <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center transition-transform duration-300">
@@ -86,7 +86,7 @@
         </div>
         <div class="flex-1 overflow-hidden">
             <div class="flex justify-between items-start">
-                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Titik ke Titik</span>
+                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Titik Tujuan</span>
                 <button onclick="stopNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <h4 id="navTargetName" class="font-bold text-sm truncate text-white mt-0.5">-</h4>
@@ -372,7 +372,7 @@
             
             userPathLine = L.polyline([], { color: '#0284c7', weight: 5, opacity: 0.85, lineJoin: 'round' }).addTo(map);
 
-            // Setiap kali peta digeser atau diputar, perbarui arah panah navigasi secara real-time
+            // Update panah navigasi setiap kali peta diputar/digeser
             map.on('rotate zoom move', () => {
                 if (activeNavTarget) {
                     updateNavigationData();
@@ -386,7 +386,7 @@
             });
         }
 
-        // SISTEM NAVIGASI SIMPLE (Sinkron dengan Rotasi Peta & Update Tiap 5 Detik)
+        // SISTEM NAVIGASI SIMPLE TERKONVERSI PRESISI
         function startNavigation(name, lat, lng) {
             activeNavTarget = { name, lat, lng };
             document.getElementById('navTargetName').innerText = name;
@@ -408,6 +408,7 @@
                 return;
             }
 
+            // P1 = Posisi Saya, P2 = Posisi Tujuan
             const p1Lat = currentPos[0];
             const p1Lng = currentPos[1];
             const p2Lat = activeNavTarget.lat;
@@ -417,7 +418,7 @@
             let distText = distMeters < 1000 ? `${Math.round(distMeters)} meter` : `${(distMeters / 1000).toFixed(2)} km`;
             document.getElementById('navTargetDistance').innerText = `Jarak: ${distText} lagi`;
 
-            // Hitung sudut bearing asli dari posisi Anda ke tujuan
+            // PERHITUNGAN SUDAH DIBERSIHKAN: DARI TITIK SAYA -> KE TITIK TUJUAN
             const dLng = (p2Lng - p1Lng) * Math.PI / 180;
             const lat1Rad = p1Lat * Math.PI / 180;
             const lat2Rad = p2Lat * Math.PI / 180;
@@ -427,13 +428,14 @@
             let bearing = Math.atan2(y, x) * 180 / Math.PI;
             bearing = (bearing + 360) % 360;
 
-            // Sesuaikan sudut panah dengan rotasi peta saat ini agar selalu akurat saat peta diputar
+            // Koreksi dengan Rotasi Peta Saat Ini
             const currentMapBearing = map.getBearing ? map.getBearing() : 0;
             let finalRotation = bearing - currentMapBearing;
 
             const arrow = document.getElementById('compassArrow');
             if (arrow) {
-                arrow.style.transform = `rotate(${finalRotation}deg)`;
+                // Tambahan -45deg untuk menetralkan orientasi bawaan Ikon Lucide Navigation agar tepat menunjuk ke atas (0°)
+                arrow.style.transform = `rotate(${finalRotation - 45}deg)`;
             }
         }
 
