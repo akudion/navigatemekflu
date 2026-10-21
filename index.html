@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Sensitive Compass Navigation</title>
+    <title>Avanza Spatial Maps & Live Compass</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -72,17 +72,17 @@
         </div>
     </div>
 
-    <!-- PANEL NAVIGASI KOMPAS (Sensitif Pergerakan Kecil) -->
+    <!-- PANEL NAVIGASI KOMPAS SENSITIF -->
     <div id="compassNavPanel" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl z-[400] flex items-center gap-6 border border-slate-700 max-w-sm w-full mx-auto">
         <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
-            <!-- Panah Kompas Responsif Tanpa Delay -->
-            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center" style="transition: transform 0.05s linear;">
+            <!-- Panah Kompas Mengikuti Arah HP Tanpa Delay -->
+            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center" style="transition: transform 0.05s ease-out;">
                 <i data-lucide="navigation" class="w-8 h-8 text-emerald-400 fill-emerald-400"></i>
             </div>
         </div>
         <div class="flex-1 overflow-hidden">
             <div class="flex justify-between items-start">
-                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Kompas Live</span>
+                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Kompas Aktif</span>
                 <button onclick="stopCompassNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <h4 id="navTargetName" class="font-bold text-sm truncate text-white mt-0.5">-</h4>
@@ -341,48 +341,42 @@
             listenCloudPhotos();
             listenOnlineUsers();
             loadCloudTrackOverlay();
-            initDeviceOrientation();
         });
 
-        // 1. KOMPAS SENSITIF REALTIME (Mendukung event DeviceOrientation & Absolute Orientation)
-        function initDeviceOrientation() {
-            // Meminta izin akses Sensor Kompas khusus untuk perangkat iOS 13+
+        // 1. SISTEM PERMINTAAN IZIN SENSOR KOMPAS (Khusus iOS 13+ & Android Modern)
+        function requestCompassPermissionAndStart(name, lat, lng) {
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                // Tombol otomatis meminta izin saat pertama kali mengaktifkan navigasi
+                DeviceOrientationEvent.requestPermission().then(response => {
+                    if (response === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
+                        startCompassNavigation(name, lat, lng);
+                    } else {
+                        alert("Izin sensor kompas ditolak oleh browser.");
+                    }
+                }).catch(err => {
+                    alert("Gagal mengaktifkan sensor orientasi: " + err);
+                });
+            } else {
+                // Untuk Android / Browser standar yang tidak butuh permission manual
+                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+                window.addEventListener('deviceorientation', handleOrientation, true);
+                startCompassNavigation(name, lat, lng);
             }
-
-            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-            window.addEventListener('deviceorientation', handleOrientation, true);
         }
 
         function handleOrientation(event) {
             let heading = null;
-            if (event.webkitCompassHeading !== undefined) {
-                heading = event.webkitCompassHeading; // Khusus Safari / iOS
-            } else if (event.alpha !== null) {
-                heading = 360 - event.alpha; // Android / Chrome standar
+            
+            // Deteksi arah kompas berdasarkan platform perangkat
+            if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
+                heading = event.webkitCompassHeading; // iOS Safari
+            } else if (event.alpha !== null && event.alpha !== undefined) {
+                heading = 360 - event.alpha; // Android Chrome (Standard alpha)
             }
 
             if (heading !== null) {
                 userHeading = heading;
                 updateCompassUI();
-            }
-        }
-
-        function requestCompassPermissionAndStart(name, lat, lng) {
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(response => {
-                    if (response === 'granted') {
-                        startCompassNavigation(name, lat, lng);
-                    } else {
-                        alert("Izin sensor kompas ditolak. Arah panah mungkin tidak bergerak otomatis.");
-                        startCompassNavigation(name, lat, lng);
-                    }
-                }).catch(() => {
-                    startCompassNavigation(name, lat, lng);
-                });
-            } else {
-                startCompassNavigation(name, lat, lng);
             }
         }
 
@@ -396,9 +390,10 @@
         function stopCompassNavigation() {
             activeNavTarget = null;
             document.getElementById('compassNavPanel').classList.add('hidden');
+            window.removeEventListener('deviceorientation', handleOrientation, true);
         }
 
-        // 2. Kalkulasi Jarak & Rotasi Sumbu Panah Kompas
+        // 2. Kalkulasi Sudut Rotasi Panah Kompas
         function updateCompassUI() {
             if (!activeNavTarget || !currentPos) return;
 
@@ -1081,7 +1076,7 @@
             } else {
                 document.getElementById('modalTitle').innerText = 'Tambah Lokasi Baru';
                 document.getElementById('locId').value = ''; document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
-                document.getElementById('locLng').value = lng ? lng.toFixed(6) : '';
+                document.getElementById('locLng').value = lng ? lng.getToken(6) : '';
             }
             document.getElementById('locationModal').classList.remove('hidden');
         }
@@ -1105,6 +1100,7 @@
         }
 
         function editLocation(id) {
+            if (-1) // dummy check
             if (!isAdminLoggedIn) return;
             const loc = locations.find(l => l.id === id);
             if (loc) openModal(loc);
