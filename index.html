@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Scrollable Sidebar</title>
+    <title>Avanza Spatial Maps & Multi-User Realtime Tracking</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -27,21 +27,38 @@
         .user-location-pin { position: relative; }
         .user-location-pin::before {
             content: ''; position: absolute; top: -10px; left: -10px; width: 36px; height: 36px;
-            background-color: #0284c7; border-radius: 50%; animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            background-color: var(--pin-color, #0284c7); border-radius: 50%; animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
     </style>
 </head>
 <body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
 
+    <!-- OVERLAY WAJIB MASUKKAN NAMA -->
+    <div id="nameModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-center p-4 text-center">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
+            <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
+                <i data-lucide="user" class="w-8 h-8"></i>
+            </div>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Selamat Datang di Avanza Maps</h2>
+            <p class="text-sm text-slate-600 mb-6">Silakan masukkan nama Anda untuk melanjutkan ke peta:</p>
+            <form onsubmit="submitUserName(event)" class="space-y-4">
+                <input type="text" id="inputUserName" required placeholder="Contoh: Budi Santoso" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-medium">
+                <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition shadow flex items-center justify-center gap-2">
+                    Masuk ke Peta <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- OVERLAY LAYAR TERKUNCI (Wajib Aktifkan GPS Realtime) -->
-    <div id="gpsLockOverlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-4 text-center">
+    <div id="gpsLockOverlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-4 text-center hidden">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 animate-bounce">
                 <i data-lucide="map-pin-off" id="lockIcon" class="w-8 h-8"></i>
             </div>
             <h2 class="text-xl font-bold text-slate-800 mb-2">Akses Memerlukan Lokasi Realtime</h2>
             <p class="text-sm text-slate-600 mb-6">
-                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi **Avanza Maps**.
+                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi.
             </p>
             <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 mb-6 flex items-center justify-center gap-2">
                 <span id="gpsStatusDot" class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
@@ -62,7 +79,7 @@
             </div>
             <div>
                 <h1 class="font-bold text-lg leading-none">Avanza Spatial Maps</h1>
-                <p class="text-xs text-slate-400">Secure Access Active</p>
+                <p class="text-xs text-slate-400">User: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
             </div>
         </div>
         <div class="flex items-center space-x-2">
@@ -97,7 +114,6 @@
 
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
-        <!-- SIDEBAR UTAMA (Dibuat agar keseluruhan isi panel bisa di-scroll ke bawah) -->
         <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-10 shadow-lg absolute md:relative h-full transition-all duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
             <div id="gpsStatusPanel" class="p-3 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-900 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
@@ -107,7 +123,7 @@
                 <span id="gpsAccuracy" class="text-[10px] font-bold text-blue-700">Mencari...</span>
             </div>
 
-            <!-- TOMBOL TENGAHKAN POSISI UNTUK GUEST & ADMIN -->
+            <!-- TOMBOL TENGAHKAN POSISI -->
             <div class="p-3 bg-sky-50 border-b border-sky-200 shrink-0">
                 <button onclick="recenterToUserLocation()" class="w-full text-xs bg-sky-600 hover:bg-sky-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
                     <i data-lucide="crosshair" class="w-4 h-4"></i> Tengahkan Posisi Saya
@@ -140,7 +156,7 @@
                 </button>
             </div>
 
-            <!-- PANEL TRACK OVERLAY (BISA DILIHAT & DIATUR TRANSPARANSINYA OLEH GUEST) -->
+            <!-- PANEL TRACK OVERLAY -->
             <div id="trackControlPanel" class="hidden p-4 bg-purple-50 border-b border-purple-200 space-y-3 shrink-0">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
@@ -172,7 +188,7 @@
                 </select>
             </div>
 
-            <!-- DAFTAR TITIK LOKASI (Bagian yang menampung daftar titik dan ikut bisa discroll) -->
+            <!-- DAFTAR TITIK LOKASI -->
             <div id="locationList" class="p-3 space-y-2 shrink-0"></div>
 
             <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center shrink-0 mt-auto">
@@ -205,7 +221,7 @@
         </div>
     </div>
 
-    <!-- Modal Form Tambah/Edit Titik (Admin Only) -->
+    <!-- Modal Form Tambah/Edit Titik -->
     <div id="locationModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -258,7 +274,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // Konfigurasi Firebase Realtime Database
         const firebaseConfig = {
           apiKey: "AIzaSyBntpxmb7jzuPVNFcXFAp95OyvwdhaIyIw",
           authDomain: "avanza-maps.firebaseapp.com",
@@ -272,12 +287,16 @@
         firebase.initializeApp(firebaseConfig);
         const rtdb = firebase.database();
 
-        let map, markersGroup, photoMarkersGroup;
+        let map, markersGroup, photoMarkersGroup, onlineUsersGroup;
         let watchId = null, userMarker = null, userCircle = null, userPathLine = null, pathCoords = [];
         let trackOverlay = null, trackBounds = null, nwMarker = null, seMarker = null, isAdjusting = false;
         let locations = [];
         let photos = [];
         let isGpsUnlocked = false;
+
+        let myUserName = "";
+        let myUserId = "user_" + Math.random().toString(36.substring(2, 9));
+        let myColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'); // Warna acak unik user
 
         let isAdminLoggedIn = false; 
         const ADMIN_PASSWORD = "admin123";
@@ -292,8 +311,169 @@
             initMap();
             listenCloudData();
             listenCloudPhotos();
+            listenOnlineUsers();
             loadCloudTrackOverlay();
+        });
+
+        // 1. FUNGSI SUBMIT NAMA SAAT PERTAMA KALI BUKA WEBSITE
+        function submitUserName(e) {
+            e.preventDefault();
+            const nameVal = document.getElementById('inputUserName').value.trim();
+            if (!nameVal) return;
+
+            myUserName = nameVal;
+            document.getElementById('displayUserName').innerText = myUserName;
+            document.getElementById('nameModal').classList.add('hidden');
+
+            // Setelah nama diisi, lanjut minta izin GPS
             requestGPSPermission();
+        }
+
+        function requestGPSPermission() {
+            const statusMsg = document.getElementById('gpsStatusMessage');
+            const statusDot = document.getElementById('gpsStatusDot');
+            document.getElementById('gpsLockOverlay').classList.remove('hidden');
+            
+            if (!("geolocation" in navigator)) {
+                statusMsg.innerText = "Browser Anda tidak mendukung Geolocation GPS.";
+                statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+                return;
+            }
+
+            statusMsg.innerText = "Mengunci sinyal GPS presisi tinggi (target ≤ 5 meter)...";
+            statusDot.className = "w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping";
+
+            const geoOptions = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            };
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    currentPos = [lat, lng];
+
+                    document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
+
+                    if (!isGpsUnlocked) {
+                        isGpsUnlocked = true;
+                        document.getElementById('gpsLockOverlay').classList.add('hidden');
+                        
+                        setTimeout(() => {
+                            map.invalidateSize();
+                            map.setView([lat, lng], 18);
+                        }, 300);
+                    }
+
+                    // BROADCAST POSISI SAYA KE FIREBASE REALTIME DATABASE
+                    rtdb.ref('online_users/' + myUserId).set({
+                        id: myUserId,
+                        name: myUserName,
+                        lat: lat,
+                        lng: lng,
+                        color: myColor,
+                        lastActive: Date.now()
+                    });
+
+                    if (isRecordingTrack) {
+                        if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
+                            pathCoords.push([lat, lng]);
+                            userPathLine.setLatLngs(pathCoords);
+                        }
+                    }
+
+                    if (userMarker) map.removeLayer(userMarker);
+                    if (userCircle) map.removeLayer(userCircle);
+
+                    userMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'user-location-pin',
+                            html: `<div style="background-color: ${myColor}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;" title="${myUserName} (Saya)"></div>`,
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
+                        })
+                    }).addTo(map).bindPopup(`<b>${myUserName} (Anda)</b>`);
+
+                    userCircle = L.circle([lat, lng], {
+                        radius: accuracy,
+                        color: myColor,
+                        fillColor: myColor,
+                        fillOpacity: 0.15,
+                        weight: 1
+                    }).addTo(map);
+                },
+                (error) => {
+                    isGpsUnlocked = false;
+                    document.getElementById('gpsLockOverlay').classList.remove('hidden');
+                    statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            statusMsg.innerText = "Akses ditolak. Izinkan lokasi presisi di browser untuk melanjutkan.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            statusMsg.innerText = "Sinyal GPS lemah/tidak ditemukan. Pastikan GPS HP/Laptop aktif.";
+                            break;
+                        case error.TIMEOUT:
+                            statusMsg.innerText = "Mencari GPS presisi tinggi butuh waktu lebih lama. Coba klik lagi.";
+                            break;
+                        default:
+                            statusMsg.innerText = "Gagal melacak lokasi realtime.";
+                    }
+                },
+                geoOptions
+            );
+        }
+
+        // 2. MENDENGARKAN LOKASI USER LAIN DARI FIREBASE
+        function listenOnlineUsers() {
+            rtdb.ref('online_users').on('value', (snapshot) => {
+                onlineUsersGroup.clearLayers();
+                const data = snapshot.val();
+                if (!data) return;
+
+                const now = Date.now();
+                Object.keys(data).forEach(uid => {
+                    const usr = data[uid];
+                    // Jangan tampilkan marker saya sendiri di list user lain agar tidak tumpang tindih
+                    if (uid === myUserId) return;
+
+                    // Hapus user yang tidak aktif lebih dari 2 menit
+                    if (now - usr.lastActive > 120000) {
+                        rtdb.ref('online_users/' + uid).remove();
+                        return;
+                    }
+
+                    // Render marker user lain dengan warna berbeda masing-masing
+                    const otherUserIcon = L.divIcon({
+                        className: 'user-location-pin',
+                        html: `<div style="background-color: ${usr.color || '#ff0000'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;"></div>`,
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    });
+
+                    const otherMarker = L.marker([usr.lat, usr.lng], { icon: otherUserIcon });
+                    otherMarker.bindPopup(`
+                        <div class="p-1">
+                            <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${usr.color || '#ff0000'}">Pengguna Online</span>
+                            <h4 class="font-bold text-sm mt-1">${usr.name}</h4>
+                            <p class="text-[10px] text-slate-500">Latitude: ${usr.lat.toFixed(5)}</p>
+                            <p class="text-[10px] text-slate-500">Longitude: ${usr.lng.toFixed(5)}</p>
+                        </div>
+                    `);
+                    onlineUsersGroup.addLayer(otherMarker);
+                });
+            });
+        }
+
+        // Hapus data online user saat menutup browser / tab
+        window.addEventListener('beforeunload', () => {
+            if (myUserId) {
+                rtdb.ref('online_users/' + myUserId).remove();
+            }
         });
 
         function toggleAdminAuth() {
@@ -472,94 +652,6 @@
             }
         }
 
-        function requestGPSPermission() {
-            const statusMsg = document.getElementById('gpsStatusMessage');
-            const statusDot = document.getElementById('gpsStatusDot');
-            
-            if (!("geolocation" in navigator)) {
-                statusMsg.innerText = "Browser Anda tidak mendukung Geolocation GPS.";
-                statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
-                return;
-            }
-
-            statusMsg.innerText = "Mengunci sinyal GPS presisi tinggi (target ≤ 5 meter)...";
-            statusDot.className = "w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping";
-
-            const geoOptions = {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
-            };
-
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    const accuracy = position.coords.accuracy;
-                    currentPos = [lat, lng];
-
-                    document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
-
-                    if (!isGpsUnlocked) {
-                        isGpsUnlocked = true;
-                        document.getElementById('gpsLockOverlay').classList.add('hidden');
-                        
-                        setTimeout(() => {
-                            map.invalidateSize();
-                            map.setView([lat, lng], 18);
-                        }, 300);
-                    }
-
-                    if (isRecordingTrack) {
-                        if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
-                            pathCoords.push([lat, lng]);
-                            userPathLine.setLatLngs(pathCoords);
-                        }
-                    }
-
-                    if (userMarker) map.removeLayer(userMarker);
-                    if (userCircle) map.removeLayer(userCircle);
-
-                    userMarker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            className: 'user-location-pin',
-                            html: `<div style="background-color: #0284c7; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;"></div>`,
-                            iconSize: [16, 16],
-                            iconAnchor: [8, 8]
-                        })
-                    }).addTo(map);
-
-                    userCircle = L.circle([lat, lng], {
-                        radius: accuracy,
-                        color: '#0284c7',
-                        fillColor: '#38bdf8',
-                        fillOpacity: 0.15,
-                        weight: 1
-                    }).addTo(map);
-                },
-                (error) => {
-                    isGpsUnlocked = false;
-                    document.getElementById('gpsLockOverlay').classList.remove('hidden');
-                    statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
-
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            statusMsg.innerText = "Akses ditolak. Izinkan lokasi presisi di browser untuk melanjutkan.";
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            statusMsg.innerText = "Sinyal GPS lemah/tidak ditemukan. Pastikan GPS HP/Laptop aktif.";
-                            break;
-                        case error.TIMEOUT:
-                            statusMsg.innerText = "Mencari GPS presisi tinggi butuh waktu lebih lama. Coba klik lagi.";
-                            break;
-                        default:
-                            statusMsg.innerText = "Gagal melacak lokasi realtime.";
-                    }
-                },
-                geoOptions
-            );
-        }
-
         function recenterToUserLocation() {
             if (currentPos) {
                 map.flyTo(currentPos, 18, { animate: true, duration: 1.5 });
@@ -672,6 +764,7 @@
             L.control.layers({ "Google Maps (Peta Jalan)": googleStreets, "Google Maps (Satelit)": googleHybrid }).addTo(map);
             markersGroup = L.layerGroup().addTo(map);
             photoMarkersGroup = L.layerGroup().addTo(map);
+            onlineUsersGroup = L.layerGroup().addTo(map);
             
             userPathLine = L.polyline([], { color: '#0284c7', weight: 5, opacity: 0.85, lineJoin: 'round' }).addTo(map);
 
