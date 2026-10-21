@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avanza Spatial Maps & Location Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col">
+
+    <!-- Header Navbar -->
+    <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md z-20">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2 rounded-lg">
+                <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-none">Avanza Spatial Maps</h1>
+                <p class="text-xs text-slate-400">Location & Asset Manager</p>
+            </div>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button onclick="exportJSON()" class="flex items-center space-x-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-md transition">
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Ekspor JSON</span>
+            </button>
+            <label class="flex items-center space-x-1 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-md cursor-pointer transition">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Impor JSON</span>
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importJSON(event)">
+            </label>
+            <button onclick="openModal()" class="flex items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Tambah Titik</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex overflow-hidden relative">
+        
+        <!-- Sidebar Marker List -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-10 shadow-lg absolute md:relative h-full transition-all duration-300 transform -translate-x-full md:translate-x-0" id="sidebar">
+            <div class="p-4 border-b border-slate-100 space-y-3">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+                    <input type="text" id="searchInput" placeholder="Cari nama lokasi..." oninput="renderList()" class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-500">
+                </div>
+                <div class="flex space-x-2">
+                    <select id="filterCategory" onchange="renderList()" class="w-full bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg p-2 focus:outline-none">
+                        <option value="ALL">Semua Kategori</option>
+                        <option value="Cabang">Cabang</option>
+                        <option value="Pos Servis">Pos Servis</option>
+                        <option value="Mitra">Mitra</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- List Titik Spasial -->
+            <div id="locationList" class="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+                <!-- Disisi melalui JavaScript -->
+            </div>
+
+            <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+                <span>Total Titik: <strong id="totalCount">0</strong></span>
+                <span class="text-emerald-600 flex items-center gap-1"><i data-lucide="database" class="w-3 h-3"></i> LocalStorage Active</span>
+            </div>
+        </aside>
+
+        <!-- Map Container -->
+        <main class="flex-1 relative">
+            <div id="map"></div>
+        </main>
+    </div>
+
+    <!-- Modal Form Tambah/Edit Titik -->
+    <div id="locationModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-semibold text-base" id="modalTitle">Tambah Lokasi Spasial</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <form id="locationForm" onsubmit="saveLocation(event)" class="p-6 space-y-4">
+                <input type="hidden" id="locId">
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Nama Lokasi</label>
+                    <input type="text" id="locName" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Kategori</label>
+                        <select id="locCategory" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="Cabang">Cabang</option>
+                            <option value="Pos Servis">Pos Servis</option>
+                            <option value="Mitra">Mitra</option>
+                            <option value="Lainnya">Lainnya</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Warna Pin</label>
+                        <input type="color" id="locColor" value="#2563eb" class="w-full h-10 border border-slate-300 rounded-lg p-1 cursor-pointer">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Latitude</label>
+                        <input type="number" step="any" id="locLat" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Longitude</label>
+                        <input type="number" step="any" id="locLng" required class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Deskripsi / Catatan</label>
+                    <textarea id="locDesc" rows="3" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">Batal</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">Simpan Titik</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        let map;
+        let markersGroup;
+        let locations = JSON.parse(localStorage.getItem('avanza_locations')) || [
+            { id: '1', name: 'Avanza Central Hub', category: 'Cabang', lat: -6.2088, lng: 106.8456, color: '#2563eb', desc: 'Pusat operasi utama.' },
+            { id: '2', name: 'Pos Servis Barat', category: 'Pos Servis', lat: -6.1751, lng: 106.8272, color: '#16a34a', desc: 'Layanan servis berkala.' }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initMap();
+            renderList();
+        });
+
+        function initMap() {
+            map = L.map('map').setView([-6.2088, 106.8456], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            markersGroup = L.layerGroup().addTo(map);
+
+            map.on('click', (e) => {
+                openModal(null, e.latlng.lat, e.latlng.lng);
+            });
+
+            renderMarkers();
+        }
+
+        function createCustomIcon(color) {
+            return L.divIcon({
+                className: 'custom-pin',
+                html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12]
+            });
+        }
+
+        function renderMarkers() {
+            markersGroup.clearLayers();
+            locations.forEach(loc => {
+                const marker = L.marker([loc.lat, loc.lng], { icon: createCustomIcon(loc.color) });
+                marker.bindPopup(`
+                    <div class="p-1">
+                        <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${loc.color}">${loc.category}</span>
+                        <h4 class="font-bold text-sm mt-1 mb-0.5">${loc.name}</h4>
+                        <p class="text-xs text-slate-600 mb-2">${loc.desc || '-'}</p>
+                        <div class="flex space-x-2 pt-1 border-t border-slate-200">
+                            <button onclick="editLocation('${loc.id}')" class="text-xs text-blue-600 font-medium hover:underline">Edit</button>
+                            <button onclick="deleteLocation('${loc.id}')" class="text-xs text-red-600 font-medium hover:underline">Hapus</button>
+                        </div>
+                    </div>
+                `);
+                markersGroup.addLayer(marker);
+            });
+            saveToStorage();
+        }
+
+        function renderList() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const category = document.getElementById('filterCategory').value;
+            const container = document.getElementById('locationList');
+            container.innerHTML = '';
+
+            const filtered = locations.filter(loc => {
+                const matchSearch = loc.name.toLowerCase().includes(search) || (loc.desc && loc.desc.toLowerCase().includes(search));
+                const matchCat = category === 'ALL' || loc.category === category;
+                return matchSearch && matchCat;
+            });
+
+            document.getElementById('totalCount').innerText = filtered.length;
+
+            filtered.forEach(loc => {
+                const item = document.createElement('div');
+                item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer transition flex items-start justify-between group';
+                item.onclick = () => map.flyTo([loc.lat, loc.lng], 15);
+
+                item.innerHTML = `
+                    <div class="flex items-start space-x-2.5">
+                        <span class="w-3 h-3 rounded-full mt-1 flex-shrink-0" style="background-color: ${loc.color}"></span>
+                        <div>
+                            <h4 class="font-semibold text-xs text-slate-800">${loc.name}</h4>
+                            <p class="text-[10px] text-slate-500">${loc.category} • [${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}]</p>
+                        </div>
+                    </div>
+                    <div class="opacity-0 group-hover:opacity-100 transition flex space-x-1" onclick="event.stopPropagation()">
+                        <button onclick="editLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                        <button onclick="deleteLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+            lucide.createIcons();
+        }
+
+        function openModal(loc = null, lat = null, lng = null) {
+            document.getElementById('locationForm').reset();
+            if (loc) {
+                document.getElementById('modalTitle').innerText = 'Edit Lokasi';
+                document.getElementById('locId').value = loc.id;
+                document.getElementById('locName').value = loc.name;
+                document.getElementById('locCategory').value = loc.category;
+                document.getElementById('locColor').value = loc.color;
+                document.getElementById('locLat').value = loc.lat;
+                document.getElementById('locLng').value = loc.lng;
+                document.getElementById('locDesc').value = loc.desc || '';
+            } else {
+                document.getElementById('modalTitle').innerText = 'Tambah Lokasi Baru';
+                document.getElementById('locId').value = '';
+                document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
+                document.getElementById('locLng').value = lng ? lng.toFixed(6) : '';
+            }
+            document.getElementById('locationModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('locationModal').classList.add('hidden');
+        }
+
+        function saveLocation(e) {
+            e.preventDefault();
+            const id = document.getElementById('locId').value || Date.now().toString();
+            const newLoc = {
+                id: id,
+                name: document.getElementById('locName').value,
+                category: document.getElementById('locCategory').value,
+                color: document.getElementById('locColor').value,
+                lat: parseFloat(document.getElementById('locLat').value),
+                lng: parseFloat(document.getElementById('locLng').value),
+                desc: document.getElementById('locDesc').value
+            };
+
+            const index = locations.findIndex(l => l.id === id);
+            if (index > -1) {
+                locations[index] = newLoc;
+            } else {
+                locations.push(newLoc);
+            }
+
+            renderMarkers();
+            renderList();
+            closeModal();
+        }
+
+        function editLocation(id) {
+            const loc = locations.find(l => l.id === id);
+            if (loc) openModal(loc);
+        }
+
+        function deleteLocation(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus titik lokasi ini?')) {
+                locations = locations.filter(l => l.id !== id);
+                renderMarkers();
+                renderList();
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('avanza_locations', JSON.stringify(locations));
+        }
+
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(locations, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", "avanza_maps_data.json");
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importJSON(event) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        locations = importedData;
+                        renderMarkers();
+                        renderList();
+                        alert('Data lokasi berhasil diimpor!');
+                    }
+                } catch (err) {
+                    alert('Format file JSON tidak valid.');
+                }
+            };
+            reader.readAsText(event.target.files[0]);
+        }
+    </script>
+</body>
+</html>
