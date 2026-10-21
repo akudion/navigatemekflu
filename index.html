@@ -84,9 +84,8 @@
         </div>
     </header>
 
-    <!-- Input Kamera Tersembunyi -->
     <!-- Input Kamera Langsung (Memaksa Membuka Kamera Belakang) -->
-<input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleCameraCapture(event)">
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleCameraCapture(event)">
 
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
@@ -446,7 +445,12 @@
                     if (!isGpsUnlocked) {
                         isGpsUnlocked = true;
                         document.getElementById('gpsLockOverlay').classList.add('hidden');
-                        map.setView([lat, lng], 18);
+                        
+                        // Perbaikan: Memaksa Leaflet memuat ulang ukuran peta penuh
+                        setTimeout(() => {
+                            map.invalidateSize();
+                            map.setView([lat, lng], 18);
+                        }, 300);
                     }
 
                     if (isRecordingTrack) {
