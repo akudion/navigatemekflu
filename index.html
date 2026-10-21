@@ -58,7 +58,7 @@
             </div>
             <h2 class="text-xl font-bold text-slate-800 mb-2">Akses Memerlukan Lokasi Realtime</h2>
             <p class="text-sm text-slate-600 mb-6">
-                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi.
+                Silakan aktifkan **GPS / Layanan Lokasi Presisi Tinggi** di perangkat Anda dan berikan izin akses lokasi agar bisa masuk ke aplikasi[cite: 1].
             </p>
             <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-xs text-slate-600 mb-6 flex items-center justify-center gap-2">
                 <span id="gpsStatusDot" class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
@@ -295,8 +295,8 @@
         let isGpsUnlocked = false;
 
         let myUserName = "";
-        let myUserId = "user_" + Math.random().toString(36.substring(2, 9));
-        let myColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'); // Warna acak unik user
+        let myUserId = "user_" + Math.random().toString(36).substring(2, 9);
+        let myColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
 
         let isAdminLoggedIn = false; 
         const ADMIN_PASSWORD = "admin123";
@@ -315,7 +315,7 @@
             loadCloudTrackOverlay();
         });
 
-        // 1. FUNGSI SUBMIT NAMA SAAT PERTAMA KALI BUKA WEBSITE
+        // FUNGSI SUBMIT NAMA (Dilengkapi e.preventDefault agar tidak looping)
         function submitUserName(e) {
             e.preventDefault();
             const nameVal = document.getElementById('inputUserName').value.trim();
@@ -325,7 +325,6 @@
             document.getElementById('displayUserName').innerText = myUserName;
             document.getElementById('nameModal').classList.add('hidden');
 
-            // Setelah nama diisi, lanjut minta izin GPS
             requestGPSPermission();
         }
 
@@ -368,7 +367,7 @@
                         }, 300);
                     }
 
-                    // BROADCAST POSISI SAYA KE FIREBASE REALTIME DATABASE
+                    // BROADCAST POSISI SAYA KE FIREBASE
                     rtdb.ref('online_users/' + myUserId).set({
                         id: myUserId,
                         name: myUserName,
@@ -428,7 +427,7 @@
             );
         }
 
-        // 2. MENDENGARKAN LOKASI USER LAIN DARI FIREBASE
+        // MENDENGARKAN LOKASI USER LAIN DARI FIREBASE
         function listenOnlineUsers() {
             rtdb.ref('online_users').on('value', (snapshot) => {
                 onlineUsersGroup.clearLayers();
@@ -438,16 +437,13 @@
                 const now = Date.now();
                 Object.keys(data).forEach(uid => {
                     const usr = data[uid];
-                    // Jangan tampilkan marker saya sendiri di list user lain agar tidak tumpang tindih
                     if (uid === myUserId) return;
 
-                    // Hapus user yang tidak aktif lebih dari 2 menit
                     if (now - usr.lastActive > 120000) {
                         rtdb.ref('online_users/' + uid).remove();
                         return;
                     }
 
-                    // Render marker user lain dengan warna berbeda masing-masing
                     const otherUserIcon = L.divIcon({
                         className: 'user-location-pin',
                         html: `<div style="background-color: ${usr.color || '#ff0000'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;"></div>`,
@@ -469,7 +465,6 @@
             });
         }
 
-        // Hapus data online user saat menutup browser / tab
         window.addEventListener('beforeunload', () => {
             if (myUserId) {
                 rtdb.ref('online_users/' + myUserId).remove();
