@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Rotating Map Navigation</title>
+    <title>Avanza Spatial Maps & Interval Navigation</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -20,7 +20,7 @@
 
     <style>
         header { position: sticky; top: 0; z-index: 1000; }
-        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; transition: transform 0.1s ease-out; }
+        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -29,13 +29,6 @@
         .user-location-pin::before {
             content: ''; position: absolute; top: -10px; left: -10px; width: 36px; height: 36px;
             background-color: var(--pin-color, #0284c7); border-radius: 50%; animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-        }
-
-        /* OPTIMASI HARDWARE ACCELERATION UNTUK PETA BERPUTAR & PANAH */
-        #compassArrow, #map {
-            will-change: transform;
-            transform-style: preserve-3d;
-            backface-visibility: hidden;
         }
     </style>
 </head>
@@ -79,22 +72,25 @@
         </div>
     </div>
 
-    <!-- PANEL NAVIGASI KOMPAS HIGH-RESPONSIVE & ROTATING MAP -->
+    <!-- PANEL NAVIGASI INTERVAL 5 DETIK / TOMBOL UPDATE -->
     <div id="compassNavPanel" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl z-[400] flex items-center gap-6 border border-slate-700 max-w-sm w-full mx-auto">
-        <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
-            <!-- Panah Kompas Tanpa Delay -->
-            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center">
-                <i data-lucide="navigation" class="w-8 h-8 text-emerald-400 fill-emerald-400 drop-shadow"></i>
+        <div class="relative w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
+            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center transition-transform duration-300">
+                <i data-lucide="navigation" class="w-7 h-7 text-emerald-400 fill-emerald-400"></i>
             </div>
-            <span id="compassDegrees" class="text-[9px] font-mono font-bold text-slate-300 absolute bottom-1 bg-slate-900/80 px-1 rounded">0°</span>
         </div>
         <div class="flex-1 overflow-hidden">
             <div class="flex justify-between items-start">
-                <span id="navModeBadge" class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Kompas + Peta Berputar</span>
+                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi (Update Tiap 5s)</span>
                 <button onclick="stopCompassNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <h4 id="navTargetName" class="font-bold text-sm truncate text-white mt-0.5">-</h4>
-            <p id="navTargetDistance" class="text-xs font-mono text-sky-300 mt-1">Menghitung jarak...</p>
+            <div class="flex justify-between items-center mt-1">
+                <p id="navTargetDistance" class="text-xs font-mono text-sky-300">Menghitung jarak...</p>
+                <button onclick="triggerManualNavigationUpdate()" class="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded font-medium transition shadow flex items-center gap-1">
+                    <i data-lucide="refresh-cw" class="w-3 h-3"></i> Update Sekarang
+                </button>
+            </div>
         </div>
     </div>
 
@@ -229,8 +225,8 @@
             </div>
         </aside>
 
-        <!-- Peta Utama -->
-        <main class="flex-1 relative overflow-hidden">
+        <!-- Peta Utama (Bebas Geser/Putar Manual) -->
+        <main class="flex-1 relative">
             <div id="map"></div>
         </main>
     </div>
@@ -338,15 +334,9 @@
         let timerInterval = null;
         let secondsElapsed = 0;
         let currentPos = null;
-        let previousPos = null;
 
         let activeNavTarget = null; 
-        let userHeading = 0; 
-        let targetRotation = 0;
-        let currentRotation = 0;
-        let mapRotation = 0;
-        let targetMapRotation = 0;
-        let isHardwareCompassActive = false;
+        let navIntervalId = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -355,70 +345,36 @@
             listenCloudPhotos();
             listenOnlineUsers();
             loadCloudTrackOverlay();
-            requestAnimationFrame(fastSmoothCompassAnimationLoop);
         });
 
-        // 1. SISTEM NAVIGASI: PETA DAN PANAH BERPUTAR KONSISTEN DENGAN GERAKAN HP
-        function requestCompassPermissionAndStart(name, lat, lng) {
-            startCompassNavigation(name, lat, lng);
-
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                DeviceOrientationEvent.requestPermission().then(response => {
-                    if (response === 'granted') {
-                        window.addEventListener('deviceorientation', handleOrientation, true);
-                    }
-                }).catch(() => {});
-            } else {
-                window.addEventListener('deviceorientationabsolute', handleOrientation, true);
-                window.addEventListener('deviceorientation', handleOrientation, true);
-            }
-        }
-
-        function handleOrientation(event) {
-            let heading = null;
-            if (event.webkitCompassHeading !== undefined && event.webkitCompassHeading !== null) {
-                heading = event.webkitCompassHeading;
-            } else if (event.alpha !== null && event.alpha !== undefined) {
-                heading = 360 - event.alpha;
-            }
-
-            if (heading !== null) {
-                isHardwareCompassActive = true;
-                userHeading = heading;
-                document.getElementById('navModeBadge').innerText = "Kompas + Peta Berputar";
-                document.getElementById('compassDegrees').innerText = `${Math.round(userHeading)}°`;
-                updateCompassTarget();
-            }
-        }
-
-        function startCompassNavigation(name, lat, lng) {
+        // 1. SISTEM NAVIGASI INTERVAL 5 DETIK / MANUAL
+        function startNavigation(name, lat, lng) {
             activeNavTarget = { name, lat, lng };
             document.getElementById('navTargetName').innerText = name;
             document.getElementById('compassNavPanel').classList.remove('hidden');
             
-            if (currentPos) {
-                map.flyTo(currentPos, 18, { animate: true, duration: 1 });
-            }
-            updateCompassTarget();
+            // Perbarui data pertama kali seketika saat tombol ditekan
+            updateNavigationData();
+
+            // Jalankan perbaruan otomatis tiap 5 detik
+            if (navIntervalId) clearInterval(navIntervalId);
+            navIntervalId = setInterval(() => {
+                updateNavigationData();
+            }, 5000);
         }
 
-        function stopCompassNavigation() {
-            activeNavTarget = null;
-            document.getElementById('compassNavPanel').classList.add('hidden');
-            window.removeEventListener('deviceorientation', handleOrientation, true);
-            window.removeEventListener('deviceorientationabsolute', handleOrientation, true);
-
-            // Kembalikan rotasi peta ke posisi tegak semula (0 derajat)
-            const mapContainer = document.getElementById('map');
-            if (mapContainer) {
-                mapContainer.style.transform = `rotate(0deg) scale(1)`;
-            }
-            targetMapRotation = 0;
-            mapRotation = 0;
+        function triggerManualNavigationUpdate() {
+            updateNavigationData();
+            alert("Navigasi berhasil diperbarui dengan data posisi GPS terbaru!");
         }
 
-        function updateCompassTarget() {
-            if (!activeNavTarget || !currentPos) return;
+        function updateNavigationData() {
+            if (!activeNavTarget) return;
+
+            if (!currentPos) {
+                document.getElementById('navTargetDistance').innerText = "Menunggu sinyal GPS...";
+                return;
+            }
 
             const p1Lat = currentPos[0];
             const p1Lng = currentPos[1];
@@ -429,6 +385,7 @@
             let distText = distMeters < 1000 ? `${Math.round(distMeters)} meter` : `${(distMeters / 1000).toFixed(2)} km`;
             document.getElementById('navTargetDistance').innerText = `Jarak: ${distText} lagi`;
 
+            // Hitung sudut bearing menuju tujuan
             const dLng = (p2Lng - p1Lng) * Math.PI / 180;
             const lat1Rad = p1Lat * Math.PI / 180;
             const lat2Rad = p2Lat * Math.PI / 180;
@@ -438,37 +395,20 @@
             let bearing = Math.atan2(y, x) * 180 / Math.PI;
             bearing = (bearing + 360) % 360;
 
-            targetRotation = bearing - userHeading;
-            targetMapRotation = -userHeading; // Peta berputar berlawanan dengan arah jarum jam HP
+            // Putar panah indikator mengarah ke tujuan
+            const arrow = document.getElementById('compassArrow');
+            if (arrow) {
+                arrow.style.transform = `rotate(${bearing}deg)`;
+            }
         }
 
-        // SMOOTH ANIMATION LOOP: MEMUTAR PANAH DENGAN CEPAT & MEMUTAR CONTAINER PETA PADA SAAT BERSAMAAN
-        function fastSmoothCompassAnimationLoop() {
-            if (activeNavTarget) {
-                // Rotasi Panah Kompas
-                let diffArrow = targetRotation - currentRotation;
-                if (diffArrow > 180) diffArrow -= 360;
-                if (diffArrow < -180) diffArrow += 360;
-                currentRotation += diffArrow * 0.6;
-
-                const arrow = document.getElementById('compassArrow');
-                if (arrow) {
-                    arrow.style.transform = `rotate(${currentRotation}deg) translateZ(0)`;
-                }
-
-                // Rotasi Kontainer Peta Leaflet
-                let diffMap = targetMapRotation - mapRotation;
-                if (diffMap > 180) diffMap -= 360;
-                if (diffMap < -180) diffMap += 360;
-                mapRotation += diffMap * 0.6;
-
-                const mapContainer = document.getElementById('map');
-                if (mapContainer) {
-                    // Skala 1.25 digunakan agar sudut peta tidak kosong terpotong di layar saat diputar
-                    mapContainer.style.transform = `rotate(${mapRotation}deg) scale(1.25) translateZ(0)`;
-                }
+        function stopCompassNavigation() {
+            activeNavTarget = null;
+            if (navIntervalId) {
+                clearInterval(navIntervalId);
+                navIntervalId = null;
             }
-            requestAnimationFrame(fastSmoothCompassAnimationLoop);
+            document.getElementById('compassNavPanel').classList.add('hidden');
         }
 
         function toggleSidebar() {
@@ -513,22 +453,7 @@
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     const accuracy = position.coords.accuracy;
-
-                    if (currentPos && (currentPos[0] !== lat || currentPos[1] !== lng)) {
-                        previousPos = currentPos;
-                    }
                     currentPos = [lat, lng];
-
-                    if (!isHardwareCompassActive && previousPos && getDistance(previousPos, currentPos) > 0.5) {
-                        const dLng = (currentPos[1] - previousPos[1]) * Math.PI / 180;
-                        const lat1Rad = previousPos[0] * Math.PI / 180;
-                        const lat2Rad = currentPos[0] * Math.PI / 180;
-                        const y = Math.sin(dLng) * Math.cos(lat2Rad);
-                        const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
-                        userHeading = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-                        document.getElementById('navModeBadge').innerText = "Kompas Gerakan GPS";
-                        document.getElementById('compassDegrees').innerText = `${Math.round(userHeading)}°`;
-                    }
 
                     document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
 
@@ -550,11 +475,6 @@
                         color: myColor,
                         lastActive: Date.now()
                     });
-
-                    if (activeNavTarget) {
-                        updateCompassTarget();
-                        map.panTo([lat, lng], { animate: true, duration: 0.5 });
-                    }
 
                     if (isRecordingTrack) {
                         if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
@@ -1067,8 +987,8 @@
                         <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${loc.color}">${loc.category}</span>
                         <h4 class="font-bold text-sm mt-1">${loc.name}</h4>
                         <p class="text-xs text-slate-600 mb-2">${loc.desc || '-'}</p>
-                        <button onclick="requestCompassPermissionAndStart('${loc.name.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng})" class="w-full mb-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
-                            <i data-lucide="navigation" class="w-3.5 h-3.5"></i> Navigasi Kompas
+                        <button onclick="startNavigation('${loc.name.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng})" class="w-full mb-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
+                            <i data-lucide="navigation" class="w-3.5 h-3.5"></i> Mulai Navigasi
                         </button>
                 `;
                 if (isAdminLoggedIn) {
@@ -1121,7 +1041,7 @@
                         <div><h4 class="font-semibold text-xs text-slate-800">${loc.name}</h4><p class="text-[10px] text-slate-500">${loc.category}</p></div>
                     </div>
                     <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-                        <button onclick="requestCompassPermissionAndStart('${loc.name.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng}); if(window.innerWidth < 768) toggleSidebar();" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition" title="Buka Navigasi Kompas">
+                        <button onclick="startNavigation('${loc.name.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng}); if(window.innerWidth < 768) toggleSidebar();" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition" title="Mulai Navigasi">
                             <i data-lucide="navigation" class="w-4 h-4"></i>
                         </button>
                         ${actionButtons}
