@@ -387,10 +387,12 @@
 
             googleStreets.addTo(map);
 
-            L.control.layers({ 
-                "Peta Jalan (Streets)": googleStreets, 
-                "Peta Satelit (Satellite)": satelliteLayer 
-            }).addTo(map);
+            const baseMaps = {
+                "Peta Jalan (Streets)": googleStreets,
+                "Peta Satelit (Satellite)": satelliteLayer
+            };
+
+            L.control.layers(baseMaps).addTo(map);
 
             markersGroup = L.layerGroup().addTo(map);
             photoMarkersGroup = L.layerGroup().addTo(map);
