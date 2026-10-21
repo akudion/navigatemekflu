@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Multi-User Realtime Tracking</title>
+    <title>Avanza Spatial Maps & Mobile Burger Menu</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -74,37 +74,41 @@
     <!-- Header Navbar -->
     <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md z-20">
         <div class="flex items-center space-x-3">
-            <div class="bg-blue-600 p-2 rounded-lg">
+            <!-- TOMBOL BURGER MENU (Hanya muncul di Mobile/HP) -->
+            <button onclick="toggleSidebar()" class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+            <div class="bg-blue-600 p-2 rounded-lg hidden sm:block">
                 <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
             </div>
             <div>
-                <h1 class="font-bold text-lg leading-none">Avanza Spatial Maps</h1>
-                <p class="text-xs text-slate-400">User: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
+                <h1 class="font-bold text-base sm:text-lg leading-none">Avanza Maps</h1>
+                <p class="text-[11px] text-slate-400">User: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
             </div>
         </div>
         <div class="flex items-center space-x-2">
             <!-- Galeri Foto (Publik) -->
-            <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md font-medium transition shadow">
+            <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="images" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Galeri Foto</span>
                 <span id="photoBadge" class="bg-indigo-800 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span>
             </button>
 
             <!-- TOMBOL ADMIN LOGIN / LOGOUT -->
-            <button id="adminAuthBtn" onclick="toggleAdminAuth()" class="flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md font-medium transition shadow">
+            <button id="adminAuthBtn" onclick="toggleAdminAuth()" class="flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="lock" class="w-4 h-4"></i>
-                <span id="adminAuthText">Login Admin</span>
+                <span id="adminAuthText">Admin</span>
             </button>
 
             <!-- TOMBOL KHUSUS ADMIN -->
-            <label id="adminUploadBtn" class="hidden items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
+            <label id="adminUploadBtn" class="hidden items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
                 <i data-lucide="file-up" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">Upload PDF Track</span>
+                <span class="hidden sm:inline">Upload PDF</span>
                 <input type="file" id="uploadTrackFile" accept=".pdf, image/*" class="hidden" onchange="handleTrackUpload(event)">
             </label>
-            <button id="adminAddLocBtn" onclick="openModal()" class="hidden items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition">
+            <button id="adminAddLocBtn" onclick="openModal()" class="hidden items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                <span>Tambah Titik</span>
+                <span class="hidden sm:inline">Tambah Titik</span>
             </button>
         </div>
     </header>
@@ -114,7 +118,17 @@
 
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
-        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-10 shadow-lg absolute md:relative h-full transition-all duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
+        <!-- SIDEBAR UTAMA (Bisa disembunyikan/ditampilkan lewat Burger Menu di HP) -->
+        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-30 shadow-2xl absolute md:relative h-full transition-transform duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
+            
+            <!-- Tombol Tutup Sidebar Khusus HP di dalam panel -->
+            <div class="p-3 bg-slate-900 text-white flex justify-between items-center md:hidden shrink-0">
+                <span class="text-xs font-bold">Menu Navigasi & Kontrol</span>
+                <button onclick="toggleSidebar()" class="p-1 hover:bg-slate-800 rounded">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
             <div id="gpsStatusPanel" class="p-3 bg-emerald-50 border-b border-emerald-200 text-xs text-emerald-900 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
                     <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></span>
@@ -125,7 +139,7 @@
 
             <!-- TOMBOL TENGAHKAN POSISI -->
             <div class="p-3 bg-sky-50 border-b border-sky-200 shrink-0">
-                <button onclick="recenterToUserLocation()" class="w-full text-xs bg-sky-600 hover:bg-sky-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
+                <button onclick="recenterToUserLocation(); toggleSidebar();" class="w-full text-xs bg-sky-600 hover:bg-sky-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
                     <i data-lucide="crosshair" class="w-4 h-4"></i> Tengahkan Posisi Saya
                 </button>
             </div>
@@ -197,6 +211,7 @@
             </div>
         </aside>
 
+        <!-- Peta Utama -->
         <main class="flex-1 relative">
             <div id="map"></div>
         </main>
@@ -315,7 +330,12 @@
             loadCloudTrackOverlay();
         });
 
-        // FUNGSI SUBMIT NAMA (Dilengkapi e.preventDefault agar tidak looping)
+        // FUNGSI TOGGLE SIDEBAR UNTUK BURGER MENU
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
         function submitUserName(e) {
             e.preventDefault();
             const nameVal = document.getElementById('inputUserName').value.trim();
@@ -367,7 +387,6 @@
                         }, 300);
                     }
 
-                    // BROADCAST POSISI SAYA KE FIREBASE
                     rtdb.ref('online_users/' + myUserId).set({
                         id: myUserId,
                         name: myUserName,
@@ -427,7 +446,6 @@
             );
         }
 
-        // MENDENGARKAN LOKASI USER LAIN DARI FIREBASE
         function listenOnlineUsers() {
             rtdb.ref('online_users').on('value', (snapshot) => {
                 onlineUsersGroup.clearLayers();
@@ -478,8 +496,8 @@
                 
                 if (pwd === ADMIN_PASSWORD) {
                     isAdminLoggedIn = true;
-                    document.getElementById('adminAuthText').innerText = "Logout Admin";
-                    document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md font-medium transition shadow";
+                    document.getElementById('adminAuthText').innerText = "Logout";
+                    document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-red-600 hover:bg-red-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
                     
                     document.getElementById('adminUploadBtn').classList.remove('hidden');
                     document.getElementById('adminUploadBtn').classList.add('flex');
@@ -495,8 +513,8 @@
                 }
             } else {
                 isAdminLoggedIn = false;
-                document.getElementById('adminAuthText').innerText = "Login Admin";
-                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md font-medium transition shadow";
+                document.getElementById('adminAuthText').innerText = "Admin";
+                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
                 
                 document.getElementById('adminUploadBtn').classList.add('hidden');
                 document.getElementById('adminUploadBtn').classList.remove('flex');
@@ -919,7 +937,11 @@
             filtered.forEach(loc => {
                 const item = document.createElement('div');
                 item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer flex items-start justify-between group';
-                item.onclick = () => map.flyTo([loc.lat, loc.lng], 15);
+                item.onclick = () => {
+                    map.flyTo([loc.lat, loc.lng], 15);
+                    // Otomatis tutup sidebar di HP setelah memilih lokasi dari daftar
+                    if (window.innerWidth < 768) toggleSidebar();
+                };
                 
                 let actionButtons = '';
                 if (isAdminLoggedIn) {
