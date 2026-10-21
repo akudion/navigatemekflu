@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Mobile Burger Menu</title>
+    <title>Avanza Spatial Maps & Sensitive Compass Navigation</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -19,12 +19,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
     <style>
-        /* Perbaikan: Mengunci posisi header agar tidak hilang/tertutup saat zoom peta di HP */
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-        }
+        header { position: sticky; top: 0; z-index: 1000; }
         #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
@@ -77,10 +72,27 @@
         </div>
     </div>
 
+    <!-- PANEL NAVIGASI KOMPAS (Sensitif Pergerakan Kecil) -->
+    <div id="compassNavPanel" class="hidden fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-slate-900/95 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl z-[400] flex items-center gap-6 border border-slate-700 max-w-sm w-full mx-auto">
+        <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
+            <!-- Panah Kompas Responsif Tanpa Delay -->
+            <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center" style="transition: transform 0.05s linear;">
+                <i data-lucide="navigation" class="w-8 h-8 text-emerald-400 fill-emerald-400"></i>
+            </div>
+        </div>
+        <div class="flex-1 overflow-hidden">
+            <div class="flex justify-between items-start">
+                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Kompas Live</span>
+                <button onclick="stopCompassNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <h4 id="navTargetName" class="font-bold text-sm truncate text-white mt-0.5">-</h4>
+            <p id="navTargetDistance" class="text-xs font-mono text-sky-300 mt-1">Menghitung jarak...</p>
+        </div>
+    </div>
+
     <!-- Header Navbar -->
     <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md z-[1000]">
         <div class="flex items-center space-x-3">
-            <!-- TOMBOL BURGER MENU (Hanya muncul di Mobile/HP) -->
             <button onclick="toggleSidebar()" class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition">
                 <i data-lucide="menu" class="w-5 h-5"></i>
             </button>
@@ -93,20 +105,17 @@
             </div>
         </div>
         <div class="flex items-center space-x-2">
-            <!-- Galeri Foto (Publik) -->
             <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="images" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Galeri Foto</span>
                 <span id="photoBadge" class="bg-indigo-800 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span>
             </button>
 
-            <!-- TOMBOL ADMIN LOGIN / LOGOUT -->
             <button id="adminAuthBtn" onclick="toggleAdminAuth()" class="flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="lock" class="w-4 h-4"></i>
                 <span id="adminAuthText">Admin</span>
             </button>
 
-            <!-- TOMBOL KHUSUS ADMIN -->
             <label id="adminUploadBtn" class="hidden items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
                 <i data-lucide="file-up" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Upload PDF</span>
@@ -124,10 +133,8 @@
 
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
-        <!-- SIDEBAR UTAMA (Bisa disembunyikan/ditampilkan lewat Burger Menu di HP) -->
         <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-[500] shadow-2xl absolute md:relative h-full transition-transform duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
             
-            <!-- Tombol Tutup Sidebar Khusus HP di dalam panel -->
             <div class="p-3 bg-slate-900 text-white flex justify-between items-center md:hidden shrink-0">
                 <span class="text-xs font-bold">Menu Navigasi & Kontrol</span>
                 <button onclick="toggleSidebar()" class="p-1 hover:bg-slate-800 rounded">
@@ -143,14 +150,12 @@
                 <span id="gpsAccuracy" class="text-[10px] font-bold text-blue-700">Mencari...</span>
             </div>
 
-            <!-- TOMBOL TENGAHKAN POSISI -->
             <div class="p-3 bg-sky-50 border-b border-sky-200 shrink-0">
                 <button onclick="recenterToUserLocation(); if(window.innerWidth < 768) toggleSidebar();" class="w-full text-xs bg-sky-600 hover:bg-sky-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
                     <i data-lucide="crosshair" class="w-4 h-4"></i> Tengahkan Posisi Saya
                 </button>
             </div>
 
-            <!-- PANEL KONTROL GPS TRACKING (KHUSUS ADMIN) -->
             <div id="adminTrackingPanel" class="hidden p-4 bg-sky-50 border-b border-sky-200 space-y-3 shrink-0">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-sky-900 flex items-center gap-1">
@@ -176,7 +181,6 @@
                 </button>
             </div>
 
-            <!-- PANEL TRACK OVERLAY -->
             <div id="trackControlPanel" class="hidden p-4 bg-purple-50 border-b border-purple-200 space-y-3 shrink-0">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
@@ -327,6 +331,9 @@
         let secondsElapsed = 0;
         let currentPos = null;
 
+        let activeNavTarget = null; 
+        let userHeading = 0; 
+
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
             initMap();
@@ -334,7 +341,88 @@
             listenCloudPhotos();
             listenOnlineUsers();
             loadCloudTrackOverlay();
+            initDeviceOrientation();
         });
+
+        // 1. KOMPAS SENSITIF REALTIME (Mendukung event DeviceOrientation & Absolute Orientation)
+        function initDeviceOrientation() {
+            // Meminta izin akses Sensor Kompas khusus untuk perangkat iOS 13+
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                // Tombol otomatis meminta izin saat pertama kali mengaktifkan navigasi
+            }
+
+            window.addEventListener('deviceorientationabsolute', handleOrientation, true);
+            window.addEventListener('deviceorientation', handleOrientation, true);
+        }
+
+        function handleOrientation(event) {
+            let heading = null;
+            if (event.webkitCompassHeading !== undefined) {
+                heading = event.webkitCompassHeading; // Khusus Safari / iOS
+            } else if (event.alpha !== null) {
+                heading = 360 - event.alpha; // Android / Chrome standar
+            }
+
+            if (heading !== null) {
+                userHeading = heading;
+                updateCompassUI();
+            }
+        }
+
+        function requestCompassPermissionAndStart(name, lat, lng) {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(response => {
+                    if (response === 'granted') {
+                        startCompassNavigation(name, lat, lng);
+                    } else {
+                        alert("Izin sensor kompas ditolak. Arah panah mungkin tidak bergerak otomatis.");
+                        startCompassNavigation(name, lat, lng);
+                    }
+                }).catch(() => {
+                    startCompassNavigation(name, lat, lng);
+                });
+            } else {
+                startCompassNavigation(name, lat, lng);
+            }
+        }
+
+        function startCompassNavigation(name, lat, lng) {
+            activeNavTarget = { name, lat, lng };
+            document.getElementById('navTargetName').innerText = name;
+            document.getElementById('compassNavPanel').classList.remove('hidden');
+            updateCompassUI();
+        }
+
+        function stopCompassNavigation() {
+            activeNavTarget = null;
+            document.getElementById('compassNavPanel').classList.add('hidden');
+        }
+
+        // 2. Kalkulasi Jarak & Rotasi Sumbu Panah Kompas
+        function updateCompassUI() {
+            if (!activeNavTarget || !currentPos) return;
+
+            const p1Lat = currentPos[0];
+            const p1Lng = currentPos[1];
+            const p2Lat = activeNavTarget.lat;
+            const p2Lng = activeNavTarget.lng;
+
+            const distMeters = getDistance([p1Lat, p1Lng], [p2Lat, p2Lng]);
+            let distText = distMeters < 1000 ? `${Math.round(distMeters)} meter` : `${(distMeters / 1000).toFixed(2)} km`;
+            document.getElementById('navTargetDistance').innerText = `Jarak: ${distText} lagi`;
+
+            const dLng = (p2Lng - p1Lng) * Math.PI / 180;
+            const lat1Rad = p1Lat * Math.PI / 180;
+            const lat2Rad = p2Lat * Math.PI / 180;
+
+            const y = Math.sin(dLng) * Math.cos(lat2Rad);
+            const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+            let bearing = Math.atan2(y, x) * 180 / Math.PI;
+            bearing = (bearing + 360) % 360;
+
+            let rotationAngle = bearing - userHeading;
+            document.getElementById('compassArrow').style.transform = `rotate(${rotationAngle}deg)`;
+        }
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -400,6 +488,10 @@
                         color: myColor,
                         lastActive: Date.now()
                     });
+
+                    if (activeNavTarget) {
+                        updateCompassUI();
+                    }
 
                     if (isRecordingTrack) {
                         if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
@@ -912,7 +1004,9 @@
                         <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${loc.color}">${loc.category}</span>
                         <h4 class="font-bold text-sm mt-1">${loc.name}</h4>
                         <p class="text-xs text-slate-600 mb-2">${loc.desc || '-'}</p>
-                        <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="inline-block mb-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded font-medium">Buka di Google Maps</a>
+                        <button onclick="requestCompassPermissionAndStart('${loc.name.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng})" class="w-full mb-2 text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
+                            <i data-lucide="navigation" class="w-3.5 h-3.5"></i> Navigasi Kompas
+                        </button>
                 `;
                 if (isAdminLoggedIn) {
                     popupContent += `
@@ -926,6 +1020,7 @@
                 marker.bindPopup(popupContent);
                 markersGroup.addLayer(marker);
             });
+            lucide.createIcons();
         }
 
         function renderList() {
@@ -941,7 +1036,7 @@
             document.getElementById('totalCount').innerText = filtered.length;
             filtered.forEach(loc => {
                 const item = document.createElement('div');
-                item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer flex items-start justify-between group';
+                item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer flex items-center justify-between group';
                 item.onclick = () => {
                     map.flyTo([loc.lat, loc.lng], 15);
                     if (window.innerWidth < 768) toggleSidebar();
@@ -951,18 +1046,23 @@
                 if (isAdminLoggedIn) {
                     actionButtons = `
                         <div class="opacity-0 group-hover:opacity-100 transition flex space-x-1" onclick="event.stopPropagation()">
-                            <button onclick="editLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                            <button onclick="deleteLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="editLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-blue-600" title="Edit"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-red-600" title="Hapus"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
                         </div>
                     `;
                 }
 
                 item.innerHTML = `
                     <div class="flex items-start space-x-2.5">
-                        <span class="w-3 h-3 rounded-full mt-1" style="background-color: ${loc.color}"></span>
+                        <span class="w-3 h-3 rounded-full mt-1 shrink-0" style="background-color: ${loc.color}"></span>
                         <div><h4 class="font-semibold text-xs text-slate-800">${loc.name}</h4><p class="text-[10px] text-slate-500">${loc.category}</p></div>
                     </div>
-                    ${actionButtons}
+                    <div class="flex items-center gap-1" onclick="event.stopPropagation()">
+                        <button onclick="requestCompassPermissionAndStart('${loc.name.replace(/'/g, "\\'")}', ${loc.lat}, ${loc.lng}); if(window.innerWidth < 768) toggleSidebar();" class="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-md transition" title="Buka Navigasi Kompas">
+                            <i data-lucide="navigation" class="w-4 h-4"></i>
+                        </button>
+                        ${actionButtons}
+                    </div>
                 `;
                 container.appendChild(item);
             });
