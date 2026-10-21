@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avanza Spatial Maps & Camera Tracker</title>
+    <title>Avanza Spatial Maps & Admin Security</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Leaflet CSS & JS -->
@@ -62,29 +62,37 @@
             </div>
             <div>
                 <h1 class="font-bold text-lg leading-none">Avanza Spatial Maps</h1>
-                <p class="text-xs text-slate-400">Camera & GPS Tracker Active</p>
+                <p class="text-xs text-slate-400">Secure Access Active</p>
             </div>
         </div>
         <div class="flex items-center space-x-2">
-            <!-- Tombol Buka Galeri Foto Pop-Up -->
+            <!-- Tombol Galeri Foto (Publik/Umum) -->
             <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="images" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Galeri Foto</span>
                 <span id="photoBadge" class="bg-indigo-800 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span>
             </button>
-            <label class="flex items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
+
+            <!-- TOMBOL ADMIN LOGIN / LOGOUT -->
+            <button id="adminAuthBtn" onclick="toggleAdminAuth()" class="flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md font-medium transition shadow">
+                <i data-lucide="lock" class="w-4 h-4"></i>
+                <span id="adminAuthText">Login Admin</span>
+            </button>
+
+            <!-- TOMBOL KHUSUS ADMIN (Tersembunyi Awalnya) -->
+            <label id="adminUploadBtn" class="hidden items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
                 <i data-lucide="file-up" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Upload PDF Track</span>
                 <input type="file" id="uploadTrackFile" accept=".pdf, image/*" class="hidden" onchange="handleTrackUpload(event)">
             </label>
-            <button onclick="openModal()" class="flex items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition">
+            <button id="adminAddLocBtn" onclick="openModal()" class="hidden items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md font-medium transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>Tambah Titik</span>
             </button>
         </div>
     </header>
 
-    <!-- Input Kamera Langsung (Memaksa Membuka Kamera Belakang) -->
+    <!-- Input Kamera Langsung -->
     <input type="file" id="cameraInput" accept="image/*" capture="environment" class="hidden" onchange="handleCameraCapture(event)">
 
     <!-- Main Content Area -->
@@ -98,8 +106,8 @@
                 <span id="gpsAccuracy" class="text-[10px] font-bold text-blue-700">Mencari...</span>
             </div>
 
-            <!-- PANEL KONTROL KELOLA GPS TRACKING & KAMERA -->
-            <div class="p-4 bg-sky-50 border-b border-sky-200 space-y-3">
+            <!-- PANEL KONTROL KELOLA GPS TRACKING (KHUSUS ADMIN) -->
+            <div id="adminTrackingPanel" class="hidden p-4 bg-sky-50 border-b border-sky-200 space-y-3">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-sky-900 flex items-center gap-1">
                         <i data-lucide="navigation-2" class="w-4 h-4 text-sky-600"></i> Kontrol GPS Tracking
@@ -111,7 +119,6 @@
                     <button onclick="recenterToUserLocation()" class="col-span-2 text-xs bg-sky-600 hover:bg-sky-700 text-white py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
                         <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Tengahkan Posisi Saya
                     </button>
-                    <!-- Tombol Ambil Foto Kamera -->
                     <button onclick="triggerCamera()" class="col-span-2 text-xs bg-rose-600 hover:bg-rose-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow">
                         <i data-lucide="camera" class="w-4 h-4"></i> Ambil Foto Sesuai Lokasi
                     </button>
@@ -128,6 +135,7 @@
                 </button>
             </div>
 
+            <!-- PANEL TRACK OVERLAY (KHUSUS ADMIN) -->
             <div id="trackControlPanel" class="hidden p-4 bg-purple-50 border-b border-purple-200 space-y-3">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
@@ -183,9 +191,7 @@
                 <button onclick="closeGalleryModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div id="galleryContainer" class="p-6 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
-                <!-- Item Foto Dijejalkan via Javascript -->
-            </div>
+            <div id="galleryContainer" class="p-6 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
 
             <div class="p-4 bg-slate-50 border-t border-slate-200 text-right">
                 <button onclick="closeGalleryModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-sm font-medium">Tutup Galeri</button>
@@ -193,7 +199,7 @@
         </div>
     </div>
 
-    <!-- Modal Form Tambah/Edit Titik -->
+    <!-- Modal Form Tambah/Edit Titik (Admin Only) -->
     <div id="locationModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -267,6 +273,9 @@
         let photos = [];
         let isGpsUnlocked = false;
 
+        let isAdminLoggedIn = false; // Status autentikasi admin
+        const ADMIN_PASSWORD = "admin123"; // Ganti password admin di sini sesuai keinginan Anda
+
         let isRecordingTrack = false;
         let timerInterval = null;
         let secondsElapsed = 0;
@@ -280,6 +289,51 @@
             loadCloudTrackOverlay();
             requestGPSPermission();
         });
+
+        // FUNGSI LOGIN / LOGOUT ADMIN
+        function toggleAdminAuth() {
+            if (!isAdminLoggedIn) {
+                const pwd = prompt("Masukkan Password Admin:");
+                if (pwd === null) return;
+                
+                if (pwd === ADMIN_PASSWORD) {
+                    isAdminLoggedIn = true;
+                    document.getElementById('adminAuthText').innerText = "Logout Admin";
+                    document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md font-medium transition shadow";
+                    
+                    // Tampilkan tombol & panel khusus admin
+                    document.getElementById('adminUploadBtn').classList.remove('hidden');
+                    document.getElementById('adminUploadBtn').classList.add('flex');
+                    document.getElementById('adminAddLocBtn').classList.remove('hidden');
+                    document.getElementById('adminAddLocBtn').classList.add('flex');
+                    document.getElementById('adminTrackingPanel').classList.remove('hidden');
+                    
+                    if (trackOverlay) {
+                        document.getElementById('trackControlPanel').classList.remove('hidden');
+                    }
+                    
+                    alert("Berhasil masuk sebagai Admin!");
+                } else {
+                    alert("Password salah!");
+                }
+            } else {
+                // Logout Admin
+                isAdminLoggedIn = false;
+                document.getElementById('adminAuthText').innerText = "Login Admin";
+                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded-md font-medium transition shadow";
+                
+                // Sembunyikan kembali tombol & panel khusus admin
+                document.getElementById('adminUploadBtn').classList.add('hidden');
+                document.getElementById('adminUploadBtn').classList.remove('flex');
+                document.getElementById('adminAddLocBtn').classList.add('hidden');
+                document.getElementById('adminAddLocBtn').classList.remove('flex');
+                document.getElementById('adminTrackingPanel').classList.add('hidden');
+                document.getElementById('trackControlPanel').classList.add('hidden');
+
+                alert("Anda telah keluar dari mode Admin.");
+            }
+            lucide.createIcons();
+        }
 
         function triggerCamera() {
             document.getElementById('cameraInput').click();
@@ -307,7 +361,6 @@
                     timestamp: new Date().toLocaleString('id-ID')
                 };
 
-                // Simpan Foto ke Cloud Realtime Database
                 rtdb.ref('captured_photos/' + photoId).set(newPhoto).then(() => {
                     alert("Foto berhasil diambil dan disimpan ke Cloud!");
                 });
@@ -341,16 +394,19 @@
                 });
 
                 const marker = L.marker([photo.lat, photo.lng], { icon: photoIcon });
-                marker.bindPopup(`
+                let popupHtml = `
                     <div class="p-1 max-w-[200px]">
                         <img src="${photo.imageData}" class="w-full h-28 object-cover rounded mb-2">
                         <p class="text-[10px] text-slate-500 mb-1">${photo.timestamp}</p>
                         <div class="flex gap-2">
                             <a href="${photo.imageData}" download="Foto_${photo.id}.jpg" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Download</a>
-                            <button onclick="deletePhoto('${photo.id}')" class="text-xs text-red-600 font-medium">Hapus</button>
-                        </div>
-                    </div>
-                `);
+                `;
+                // Tombol Hapus foto hanya muncul jika sudah login admin
+                if (isAdminLoggedIn) {
+                    popupHtml += `<button onclick="deletePhoto('${photo.id}')" class="text-xs text-red-600 font-medium">Hapus</button>`;
+                }
+                popupHtml += `</div></div>`;
+                marker.bindPopup(popupHtml);
                 photoMarkersGroup.addLayer(marker);
             });
         }
@@ -392,9 +448,7 @@
                             <a href="${photo.imageData}" download="Foto_AvanzaMaps_${photo.id}.jpg" class="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition" title="Download Foto">
                                 <i data-lucide="download" class="w-4 h-4"></i>
                             </a>
-                            <button onclick="deletePhoto('${photo.id}')" class="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition" title="Hapus Foto">
-                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                            </button>
+                            ${isAdminLoggedIn ? `<button onclick="deletePhoto('${photo.id}')" class="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition" title="Hapus Foto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
                         </div>
                     </div>
                 `;
@@ -446,7 +500,6 @@
                         isGpsUnlocked = true;
                         document.getElementById('gpsLockOverlay').classList.add('hidden');
                         
-                        // Perbaikan: Memaksa Leaflet memuat ulang ukuran peta penuh
                         setTimeout(() => {
                             map.invalidateSize();
                             map.setView([lat, lng], 18);
@@ -618,7 +671,12 @@
             
             userPathLine = L.polyline([], { color: '#0284c7', weight: 5, opacity: 0.85, lineJoin: 'round' }).addTo(map);
 
-            map.on('click', (e) => { if (!isAdjusting) openModal(null, e.latlng.lat, e.latlng.lng); });
+            map.on('click', (e) => { 
+                // Klik peta untuk tambah titik hanya aktif jika sudah login admin
+                if (!isAdjusting && isAdminLoggedIn) {
+                    openModal(null, e.latlng.lat, e.latlng.lng); 
+                }
+            });
         }
 
         function listenCloudData() {
@@ -669,7 +727,11 @@
                 trackBounds = [[center.lat - 0.005, center.lng - 0.008], [center.lat + 0.005, center.lng + 0.008]];
             }
             trackOverlay = L.imageOverlay(imageUrl, trackBounds, { opacity: 0.7, interactive: true }).addTo(map);
-            document.getElementById('trackControlPanel').classList.remove('hidden');
+            
+            // Panel overlay hanya muncul jika admin login
+            if (isAdminLoggedIn) {
+                document.getElementById('trackControlPanel').classList.remove('hidden');
+            }
             fitTrackBounds();
 
             rtdb.ref('track_overlay').set({ imageUrl: imageUrl, bounds: trackBounds });
@@ -732,18 +794,24 @@
             markersGroup.clearLayers();
             locations.forEach(loc => {
                 const marker = L.marker([loc.lat, loc.lng], { icon: createCustomIcon(loc.color) });
-                marker.bindPopup(`
+                let popupContent = `
                     <div class="p-1">
                         <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${loc.color}">${loc.category}</span>
                         <h4 class="font-bold text-sm mt-1">${loc.name}</h4>
                         <p class="text-xs text-slate-600 mb-2">${loc.desc || '-'}</p>
                         <a href="https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}" target="_blank" class="inline-block mb-2 text-xs bg-emerald-600 text-white px-2 py-1 rounded font-medium">Buka di Google Maps</a>
+                `;
+                // Tombol Edit & Hapus Titik hanya tampil jika sudah login admin
+                if (isAdminLoggedIn) {
+                    popupContent += `
                         <div class="flex space-x-2 pt-1 border-t border-slate-200">
                             <button onclick="editLocation('${loc.id}')" class="text-xs text-blue-600 font-medium">Edit</button>
                             <button onclick="deleteLocation('${loc.id}')" class="text-xs text-red-600 font-medium">Hapus</button>
                         </div>
-                    </div>
-                `);
+                    `;
+                }
+                popupContent += `</div>`;
+                marker.bindPopup(popupContent);
                 markersGroup.addLayer(marker);
             });
         }
@@ -763,15 +831,23 @@
                 const item = document.createElement('div');
                 item.className = 'p-3 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer flex items-start justify-between group';
                 item.onclick = () => map.flyTo([loc.lat, loc.lng], 15);
+                
+                let actionButtons = '';
+                if (isAdminLoggedIn) {
+                    actionButtons = `
+                        <div class="opacity-0 group-hover:opacity-100 transition flex space-x-1" onclick="event.stopPropagation()">
+                            <button onclick="editLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+                            <button onclick="deleteLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                    `;
+                }
+
                 item.innerHTML = `
                     <div class="flex items-start space-x-2.5">
                         <span class="w-3 h-3 rounded-full mt-1" style="background-color: ${loc.color}"></span>
                         <div><h4 class="font-semibold text-xs text-slate-800">${loc.name}</h4><p class="text-[10px] text-slate-500">${loc.category}</p></div>
                     </div>
-                    <div class="opacity-0 group-hover:opacity-100 transition flex space-x-1" onclick="event.stopPropagation()">
-                        <button onclick="editLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-blue-600"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-                        <button onclick="deleteLocation('${loc.id}')" class="p-1 text-slate-400 hover:text-red-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                    </div>
+                    ${actionButtons}
                 `;
                 container.appendChild(item);
             });
@@ -779,6 +855,7 @@
         }
 
         function openModal(loc = null, lat = null, lng = null) {
+            if (!isAdminLoggedIn) return; // Hanya admin yang bisa buka modal tambah/edit
             document.getElementById('locationForm').reset();
             if (loc) {
                 document.getElementById('modalTitle').innerText = 'Edit Lokasi';
@@ -798,6 +875,7 @@
 
         function saveLocation(e) {
             e.preventDefault();
+            if (!isAdminLoggedIn) return;
             const id = document.getElementById('locId').value || Date.now().toString();
             const newLoc = {
                 name: document.getElementById('locName').value,
@@ -812,11 +890,13 @@
         }
 
         function editLocation(id) {
+            if (!isAdminLoggedIn) return;
             const loc = locations.find(l => l.id === id);
             if (loc) openModal(loc);
         }
 
         function deleteLocation(id) {
+            if (!isAdminLoggedIn) return;
             if (confirm('Hapus titik lokasi ini?')) {
                 rtdb.ref('locations/' + id).remove();
             }
