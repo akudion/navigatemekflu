@@ -53,16 +53,16 @@
 </head>
 <body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
 
-    <!-- OVERLAY WAJIB MASUKKAN NAMA -->
-    <div id="nameModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-center p-4 text-center">
+    <!-- OVERLAY WAJIB MASUKKAN TOKEN -->
+    <div id="nameModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-center p-4 text-center hidden">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
-                <i data-lucide="user" class="w-8 h-8"></i>
+                <i data-lucide="key" class="w-8 h-8"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Selamat Datang di Avanza Maps</h2>
-            <p class="text-sm text-slate-600 mb-6">Silakan masukkan nama Anda untuk melanjutkan ke peta:</p>
-            <form onsubmit="submitUserName(event)" class="space-y-4">
-                <input type="text" id="inputUserName" required placeholder="Contoh: Budi Santoso" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-medium">
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Praktikum Mekflu Maps</h2>
+            <p class="text-sm text-slate-600 mb-6">Silakan masukkan **Token Akses Kelompok** Anda (Setiap token khusus 1 Perangkat):</p>
+            <form onsubmit="submitToken(event)" class="space-y-4">
+                <input type="text" id="inputToken" required placeholder="Contoh: AVZ-X7K2" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono font-bold uppercase tracking-wider">
                 <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition shadow flex items-center justify-center gap-2">
                     Masuk ke Peta <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
@@ -70,7 +70,7 @@
         </div>
     </div>
 
-    <!-- OVERLAY LAYAR TERKUNCI (Wajib Aktifkan GPS Realtime) -->
+    <!-- OVERLAY LAYAR TERKUNCI GPS -->
     <div id="gpsLockOverlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-4 text-center hidden">
         <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 animate-bounce">
@@ -91,7 +91,7 @@
         </div>
     </div>
 
-    <!-- PANEL NAVIGASI DENGAN 4 TITIK TETAP -->
+    <!-- PANEL NAVIGASI BAWAH -->
     <div id="compassNavPanel" class="hidden bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-700 max-w-sm w-full mx-auto">
         <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
             <span class="absolute top-0.5 text-[10px] font-bold text-slate-300">U</span>
@@ -127,11 +127,17 @@
                 <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
             </div>
             <div>
-                <h1 class="font-bold text-base sm:text-lg leading-none">Avanza Maps</h1>
-                <p class="text-[11px] text-slate-400">User: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
+                <h1 class="font-bold text-base sm:text-lg leading-none">Praktikum Mekflu Maps</h1>
+                <p class="text-[11px] text-slate-400">Login as: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
             </div>
         </div>
         <div class="flex items-center space-x-2">
+            <!-- TOMBOL TRACK MENU (DAPAT DILIHAT SEMUA USER) -->
+            <button id="userTrackMenuBtn" onclick="openTrackModal()" class="flex items-center space-x-1 text-xs bg-sky-600 hover:bg-sky-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
+                <i data-lucide="compass" class="w-4 h-4"></i>
+                <span>TRACK MENU</span>
+            </button>
+
             <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="images" class="w-4 h-4"></i>
                 <span class="hidden sm:inline">Galeri Foto</span>
@@ -183,31 +189,6 @@
                 </button>
             </div>
 
-            <div id="adminTrackingPanel" class="hidden p-4 bg-sky-50 border-b border-sky-200 space-y-3 shrink-0">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-sky-900 flex items-center gap-1">
-                        <i data-lucide="navigation-2" class="w-4 h-4 text-sky-600"></i> Kontrol GPS Tracking
-                    </span>
-                    <span id="timerDisplay" class="text-xs font-mono font-bold bg-sky-200 text-sky-800 px-2 py-0.5 rounded">00:00:00</span>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="triggerCamera()" class="col-span-2 text-xs bg-rose-600 hover:bg-rose-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow">
-                        <i data-lucide="camera" class="w-4 h-4"></i> Ambil Foto Sesuai Lokasi
-                    </button>
-                    <button id="toggleTrackBtn" onclick="toggleTrackingRecording()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm">
-                        <i data-lucide="play" class="w-3.5 h-3.5"></i> Mulai Track
-                    </button>
-                    <button onclick="resetTrackingPath()" class="text-xs border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 py-1.5 rounded font-medium flex items-center justify-center gap-1 transition">
-                        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset Track
-                    </button>
-                </div>
-
-                <button id="saveTrackBtn" onclick="saveCurrentTrack()" disabled class="w-full text-xs bg-slate-300 text-slate-500 py-1.5 rounded font-medium flex items-center justify-center gap-1 cursor-not-allowed transition">
-                    <i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan Rekaman Jalur (Cloud)
-                </button>
-            </div>
-
             <div id="trackControlPanel" class="hidden p-4 bg-purple-50 border-b border-purple-200 space-y-3 shrink-0">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-purple-900 flex items-center gap-1">
@@ -234,7 +215,7 @@
                     <option value="ALL">Semua Kategori</option>
                     <option value="Cabang">Cabang</option>
                     <option value="Pos Servis">Pos Servis</option>
-                    <option value="Mitra">Mitra</option>
+                    <option value="Trip">Trip</option>
                     <option value="Lainnya">Lainnya</option>
                 </select>
             </div>
@@ -242,7 +223,7 @@
             <!-- DAFTAR TITIK LOKASI -->
             <div id="locationList" class="p-3 space-y-2 shrink-0"></div>
 
-            <!-- TOMBOL LAPORAN PASUT (DIBAWAH DAFTAR TITIK POS / IN BURGER MENU) -->
+            <!-- TOMBOL LAPORAN PASUT -->
             <div class="p-3 bg-slate-100 border-t border-slate-200 shrink-0">
                 <button onclick="openPasutModal(); if(window.innerWidth < 768) toggleSidebar();" class="w-full py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold text-xs rounded-lg transition shadow flex items-center justify-center gap-2">
                     <i data-lucide="waves" class="w-4 h-4"></i> Buat Laporan Pasut
@@ -257,7 +238,6 @@
 
         <!-- Peta Utama -->
         <main class="flex-1 relative">
-            <!-- TOMBOL GANTI MAP SATELIT (MELAYANG DI POJOK KANAN BAWAH) -->
             <button id="floatingSatelliteBtn" onclick="toggleMapLayer()" class="bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-300 flex items-center gap-2 text-xs transition transform active:scale-95">
                 <i data-lucide="layers" class="w-4 h-4 text-blue-600"></i>
                 <span id="satelliteBtnText">Satelit: OFF</span>
@@ -267,7 +247,78 @@
         </main>
     </div>
 
-    <!-- MODAL POP-UP LAPORAN PASUT (TERINTEGRASI FONNTE) -->
+    <!-- MODAL POP-UP "TRACK MENU" -->
+    <div id="trackModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10002] flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="compass" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="font-bold text-base">Menu Kelola Track GPS</h3>
+                </div>
+                <button onclick="closeTrackModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
+                <!-- Perekaman Real-time (Bisa Digunakan Semua User) -->
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-sky-900 flex items-center gap-1.5">
+                            <i data-lucide="navigation-2" class="w-4 h-4 text-sky-600"></i> Rekam Track Baru
+                        </span>
+                        <span id="timerDisplay" class="text-xs font-mono font-bold bg-sky-200 text-sky-800 px-2.5 py-1 rounded">00:00:00</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="triggerCamera()" class="col-span-2 text-xs bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg font-medium flex items-center justify-center gap-1.5 transition shadow">
+                            <i data-lucide="camera" class="w-4 h-4"></i> Ambil Foto Sesuai Lokasi
+                        </button>
+                        <button id="toggleTrackBtn" onclick="toggleTrackingRecording()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
+                            <i data-lucide="play" class="w-4 h-4"></i> Mulai Track
+                        </button>
+                        <button onclick="resetTrackingPath()" class="text-xs border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition">
+                            <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Reset Track
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-1">
+                        <!-- SIMPAN BISA DIGUNAKAN OLEH SEMUA USER -->
+                        <button id="saveTrackBtn" onclick="saveCurrentTrack()" disabled class="text-xs bg-slate-300 text-slate-500 py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 cursor-not-allowed transition">
+                            <i data-lucide="save" class="w-4 h-4"></i> Simpan ke Cloud
+                        </button>
+                        <button onclick="downloadActiveTrackAsKML()" class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
+                            <i data-lucide="download" class="w-4 h-4"></i> Download KML
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Hasil Rekaman Track Tersimpan (KHUSUS ADMIN) -->
+                <div id="adminHistorySection" class="space-y-3 hidden">
+                    <div class="flex justify-between items-center">
+                        <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="database" class="w-4 h-4 text-purple-600"></i> Kelola Riwayat Track Cloud (Admin)
+                        </h4>
+                        <span id="savedTrackCount" class="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full font-bold text-slate-700">0 Track</span>
+                    </div>
+
+                    <div id="savedTracksContainer" class="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+                        <div class="text-center py-6 text-slate-400 text-xs">Memuat data track dari database...</div>
+                    </div>
+                </div>
+
+                <!-- Pesan informasi bagi User Biasa -->
+                <div id="userHistoryNotice" class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs flex items-center gap-2">
+                    <i data-lucide="info" class="w-4 h-4 shrink-0 text-amber-600"></i>
+                    <span>Track yang Anda simpan telah terkirim ke Cloud. Daftar riwayat track tersimpan hanya dapat dikelola oleh **Admin**.</span>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 text-right shrink-0">
+                <button onclick="closeTrackModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition">Tutup Menu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL POP-UP LAPORAN PASUT -->
     <div id="pasutModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10001] flex items-center justify-center hidden">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-200">
             <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
@@ -338,7 +389,7 @@
                         <select id="locCategory" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             <option value="Cabang">Cabang</option>
                             <option value="Pos Servis">Pos Servis</option>
-                            <option value="Mitra">Mitra</option>
+                            <option value="Trip">Trip</option>
                             <option value="Lainnya">Lainnya</option>
                         </select>
                     </div>
@@ -395,11 +446,23 @@
         let trackOverlay = null, trackBounds = null, nwMarker = null, seMarker = null, isAdjusting = false;
         let locations = [];
         let photos = [];
+        let savedTracksList = [];
+        let activeCloudTrackLine = null;
         let isGpsUnlocked = false;
 
-        let myUserName = "";
-        let myUserId = "user_" + Math.random().toString(36).substring(2, 9);
-        let myColor = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+        let myDeviceId = localStorage.getItem('avanza_device_id');
+        if (!myDeviceId) {
+            myDeviceId = "dev_" + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+            localStorage.setItem('avanza_device_id', myDeviceId);
+        }
+
+        let myUserName = localStorage.getItem('avanza_user_name') || "";
+        let myUserToken = localStorage.getItem('avanza_user_token') || "";
+        let myUserId = localStorage.getItem('avanza_user_id') || ("user_" + Math.random().toString(36).substring(2, 9));
+        let myColor = localStorage.getItem('avanza_user_color') || ('#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'));
+
+        localStorage.setItem('avanza_user_id', myUserId);
+        localStorage.setItem('avanza_user_color', myColor);
 
         let isAdminLoggedIn = false; 
         const ADMIN_PASSWORD = "admin123";
@@ -411,6 +474,29 @@
 
         let activeNavTarget = null; 
         let navIntervalId = null;
+        let wakeLock = null;
+
+        const VALID_TOKENS = {
+            "AVZ-X7K2": "Kelompok 1",
+            "AVZ-M9P4": "Kelompok 2",
+            "AVZ-B3R8": "Kelompok 3",
+            "AVZ-L5W1": "Kelompok 4",
+            "AVZ-Q8N6": "Kelompok 5",
+            "AVZ-T2J9": "Kelompok 6",
+            "AVZ-H4F7": "Kelompok 7",
+            "AVZ-V1C5": "Kelompok 8",
+            "AVZ-D6Y3": "Kelompok 9",
+            "AVZ-G9S2": "Kelompok 10",
+            "AVZ-K8W4": "Kelompok 11",
+            "AVZ-P5T1": "Kelompok 12",
+            "AVZ-R2M8": "Kelompok 13",
+            "AVZ-E7B9": "Kelompok 14",
+            "AVZ-Z4Q6": "Kelompok 15",
+            "AVZ-C1J3": "Kelompok 16",
+            "AVZ-N8F2": "Kelompok 17",
+            "AVZ-U3Y5": "Kelompok 18",
+            "AVZ-W9K7": "Kelompok 19"
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -418,8 +504,50 @@
             listenCloudData();
             listenCloudPhotos();
             listenOnlineUsers();
+            listenSavedTracks();
             loadCloudTrackOverlay();
+
+            if (myUserToken && VALID_TOKENS[myUserToken]) {
+                verifyTokenDevice(myUserToken, true);
+            } else {
+                document.getElementById('nameModal').classList.remove('hidden');
+            }
         });
+
+        function verifyTokenDevice(token, autoLogin = false) {
+            const groupName = VALID_TOKENS[token];
+            const tokenRef = rtdb.ref('active_tokens/' + token);
+
+            tokenRef.once('value', (snapshot) => {
+                const activeData = snapshot.val();
+                const now = Date.now();
+
+                if (activeData && activeData.deviceId !== myDeviceId && (now - activeData.lastActive < 120000)) {
+                    alert(`❌ PERINGATAN: Token "${token}" sedang digunakan oleh Perangkat Lain! 1 Token hanya bisa dipakai di 1 Perangkat.`);
+                    localStorage.removeItem('avanza_user_name');
+                    localStorage.removeItem('avanza_user_token');
+                    myUserName = ""; myUserToken = "";
+                    document.getElementById('nameModal').classList.remove('hidden');
+                } else {
+                    myUserName = groupName;
+                    myUserToken = token;
+                    localStorage.setItem('avanza_user_name', myUserName);
+                    localStorage.setItem('avanza_user_token', myUserToken);
+
+                    tokenRef.set({
+                        deviceId: myDeviceId,
+                        groupName: myUserName,
+                        lastActive: Date.now()
+                    });
+
+                    tokenRef.onDisconnect().remove();
+
+                    document.getElementById('displayUserName').innerText = myUserName;
+                    document.getElementById('nameModal').classList.add('hidden');
+                    requestGPSPermission();
+                }
+            });
+        }
 
         function initMap() {
             map = L.map('map', {
@@ -483,79 +611,29 @@
             lucide.createIcons();
         }
 
-        /* --- LOGIK LAPORAN PASUT & FONNTE API --- */
-        const FONNTE_TOKEN = "JP3JdqHBma7fgxy88MqT";
-        const GROUP_ID = "120363429913153999@g.us";
-        let pasutTimer = null;
-
-        function openPasutModal() {
-            document.getElementById('pasutTerakhir').value = '';
-            document.getElementById('pasutSaatIni').value = '';
-            updatePasutLiveTime();
-            if (pasutTimer) clearInterval(pasutTimer);
-            pasutTimer = setInterval(updatePasutLiveTime, 1000);
-
-            document.getElementById('pasutModal').classList.remove('hidden');
-        }
-
-        function closePasutModal() {
-            if (pasutTimer) clearInterval(pasutTimer);
-            document.getElementById('pasutModal').classList.add('hidden');
-        }
-
-        function updatePasutLiveTime() {
-            const now = new Date();
-            const timeStr = now.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
-            const liveElem = document.getElementById('pasutLiveTime');
-            if (liveElem) liveElem.innerText = timeStr;
-        }
-
-        async function sendPasutReportToFonnte(e) {
-            e.preventDefault();
-            const pasutTerakhir = document.getElementById('pasutTerakhir').value.trim();
-            const pasutSaatIni = document.getElementById('pasutSaatIni').value.trim();
-            const timestampStr = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
-
-            let gpsLocationText = "GPS belum terdeteksi";
-            if (currentPos) {
-                gpsLocationText = `https://www.google.com/maps?q=${currentPos[0]},${currentPos[1]}`;
-            }
-
-            const message = `🌊 *LAPORAN PASANGAN SURUT (PASUT)*\n\n` +
-                            `👤 *Pelapor:* ${myUserName || 'Anonim'}\n` +
-                            `📅 *Waktu Pengisian:* ${timestampStr}\n` +
-                            `📉 *Nilai Pasut Terakhir:* ${pasutTerakhir}\n` +
-                            `📈 *Nilai Pasut Saat Ini:* ${pasutSaatIni}\n` +
-                            `📍 *Lokasi GPS:* ${gpsLocationText}\n\n` +
-                            `_Pesan dikirim otomatis melalui sistem Praktikum Mekflu_`;
-
-            try {
-                const response = await fetch('https://api.fonnte.com/send', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': FONNTE_TOKEN,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        target: GROUP_ID,
-                        message: message
-                    })
-                });
-
-                const result = await response.json();
-
-                if (result.status) {
-                    alert('✅ Laporan Pasut berhasil dikirim ke Grup WhatsApp!');
-                    document.getElementById('pasutForm').reset();
-                    closePasutModal();
-                } else {
-                    alert('❌ Gagal mengirim: ' + (result.reason || 'Periksa Token atau Group ID Fonnte'));
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    console.error(`${err.name}, ${err.message}`);
                 }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('⚠️ Terjadi kesalahan koneksi ke server Fonnte.');
             }
         }
+
+        function releaseWakeLock() {
+            if (wakeLock !== null) {
+                wakeLock.release().then(() => {
+                    wakeLock = null;
+                });
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible' && isRecordingTrack) {
+                await requestWakeLock();
+            }
+        });
 
         function startNavigation(name, lat, lng) {
             activeNavTarget = { name, lat, lng };
@@ -659,210 +737,165 @@
             document.getElementById('compassNavPanel').classList.add('hidden');
         }
 
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
+        function openTrackModal() {
+            document.getElementById('trackModal').classList.remove('hidden');
+            renderSavedTracksUI();
+            lucide.createIcons();
         }
 
-        function submitUserName(e) {
-            e.preventDefault();
-            const nameVal = document.getElementById('inputUserName').value.trim();
-            if (!nameVal) return;
-
-            myUserName = nameVal;
-            document.getElementById('displayUserName').innerText = myUserName;
-            document.getElementById('nameModal').classList.add('hidden');
-
-            requestGPSPermission();
+        function closeTrackModal() {
+            document.getElementById('trackModal').classList.add('hidden');
         }
 
-        function requestGPSPermission() {
-            const statusMsg = document.getElementById('gpsStatusMessage');
-            const statusDot = document.getElementById('gpsStatusDot');
-            document.getElementById('gpsLockOverlay').classList.remove('hidden');
-            
-            if (!("geolocation" in navigator)) {
-                statusMsg.innerText = "Browser Anda tidak mendukung Geolocation GPS.";
-                statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+        function downloadActiveTrackAsKML() {
+            if (pathCoords.length === 0) {
+                alert("Belum ada data path yang terekam.");
                 return;
             }
 
-            statusMsg.innerText = "Mengunci sinyal GPS presisi tinggi (target ≤ 5 meter)...";
-            statusDot.className = "w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping";
+            let kmlCoordinates = pathCoords.map(coord => `${coord[1]},${coord[0]},0`).join('\n');
+            let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Rekaman Track Maps</name>
+    <Placemark>
+      <name>Jalur Lintasan</name>
+      <LineString>
+        <altitudeMode>relativeToGround</altitudeMode>
+        <coordinates>
+${kmlCoordinates}
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>`;
 
-            const geoOptions = {
-                enableHighAccuracy: true,
-                timeout: 15000,
-                maximumAge: 0
-            };
-
-            watchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
-                    const accuracy = position.coords.accuracy;
-                    currentPos = [lat, lng];
-
-                    document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
-
-                    if (!isGpsUnlocked) {
-                        isGpsUnlocked = true;
-                        document.getElementById('gpsLockOverlay').classList.add('hidden');
-                        
-                        setTimeout(() => {
-                            map.invalidateSize();
-                            map.setView([lat, lng], 18);
-                        }, 300);
-                    }
-
-                    rtdb.ref('online_users/' + myUserId).set({
-                        id: myUserId,
-                        name: myUserName,
-                        lat: lat,
-                        lng: lng,
-                        color: myColor,
-                        lastActive: Date.now()
-                    });
-
-                    if (isRecordingTrack) {
-                        if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
-                            pathCoords.push([lat, lng]);
-                            userPathLine.setLatLngs(pathCoords);
-                        }
-                    }
-
-                    if (userMarker) map.removeLayer(userMarker);
-                    if (userCircle) map.removeLayer(userCircle);
-
-                    userMarker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            className: 'user-location-pin',
-                            html: `<div style="background-color: ${myColor}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;" title="${myUserName} (Saya)"></div>`,
-                            iconSize: [16, 16],
-                            iconAnchor: [8, 8]
-                        })
-                    }).addTo(map).bindPopup(`<b>${myUserName} (Anda)</b>`);
-
-                    userCircle = L.circle([lat, lng], {
-                        radius: accuracy,
-                        color: myColor,
-                        fillColor: myColor,
-                        fillOpacity: 0.15,
-                        weight: 1
-                    }).addTo(map);
-
-                    if (activeNavTarget && isNavLineActive) {
-                        drawNavigationLine();
-                    }
-                },
-                (error) => {
-                    isGpsUnlocked = false;
-                    document.getElementById('gpsLockOverlay').classList.remove('hidden');
-                    statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
-
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            statusMsg.innerText = "Akses ditolak. Izinkan lokasi presisi di browser untuk melanjutkan.";
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            statusMsg.innerText = "Sinyal GPS lemah/tidak ditemukan. Pastikan GPS HP/Laptop aktif.";
-                            break;
-                        case error.TIMEOUT:
-                            statusMsg.innerText = "Mencari GPS presisi tinggi butuh waktu lebih lama. Coba klik lagi.";
-                            break;
-                        default:
-                            statusMsg.innerText = "Gagal melacak lokasi realtime.";
-                    }
-                },
-                geoOptions
-            );
+            const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Track_AvanzaMaps_${Date.now()}.kml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
-        function listenOnlineUsers() {
-            rtdb.ref('online_users').on('value', (snapshot) => {
-                onlineUsersGroup.clearLayers();
-                const data = snapshot.val();
-                if (!data) return;
+        function downloadCloudTrackAsKML(trackId) {
+            if (!isAdminLoggedIn) return;
+            const track = savedTracksList.find(t => t.id === trackId);
+            if (!track || !track.coordinates) {
+                alert("Data koordinat track tidak ditemukan.");
+                return;
+            }
 
-                const now = Date.now();
-                Object.keys(data).forEach(uid => {
-                    const usr = data[uid];
-                    if (uid === myUserId) return;
+            let kmlCoordinates = track.coordinates.map(coord => `${coord[1]},${coord[0]},0`).join('\n');
+            let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${track.name || 'Track Database'}</name>
+    <Placemark>
+      <name>${track.name}</name>
+      <LineString>
+        <altitudeMode>relativeToGround</altitudeMode>
+        <coordinates>
+${kmlCoordinates}
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>`;
 
-                    if (now - usr.lastActive > 120000) {
-                        rtdb.ref('online_users/' + uid).remove();
-                        return;
-                    }
+            const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${track.name.replace(/[^a-zA-Z0-9]/g, '_')}.kml`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
 
-                    const otherUserIcon = L.divIcon({
-                        className: 'user-location-pin',
-                        html: `<div style="background-color: ${usr.color || '#ff0000'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;"></div>`,
-                        iconSize: [16, 16],
-                        iconAnchor: [8, 8]
-                    });
+        function loadTrackToMap(trackId) {
+            if (!isAdminLoggedIn) return;
+            const track = savedTracksList.find(t => t.id === trackId);
+            if (!track || !track.coordinates) {
+                alert("Koordinat track tidak valid.");
+                return;
+            }
 
-                    const otherMarker = L.marker([usr.lat, usr.lng], { icon: otherUserIcon });
-                    otherMarker.bindPopup(`
-                        <div class="p-1">
-                            <span class="text-xs px-2 py-0.5 rounded text-white font-semibold" style="background-color: ${usr.color || '#ff0000'}">Pengguna Online</span>
-                            <h4 class="font-bold text-sm mt-1">${usr.name}</h4>
-                            <p class="text-[10px] text-slate-500">Latitude: ${usr.lat.toFixed(5)}</p>
-                            <p class="text-[10px] text-slate-500">Longitude: ${usr.lng.toFixed(5)}</p>
-                        </div>
-                    `);
-                    onlineUsersGroup.addLayer(otherMarker);
+            if (activeCloudTrackLine) {
+                map.removeLayer(activeCloudTrackLine);
+            }
+
+            let latLngs = track.coordinates.map(coord => [coord[0], coord[1]]);
+            activeCloudTrackLine = L.polyline(latLngs, { color: '#9333ea', weight: 5, opacity: 0.85 }).addTo(map);
+            map.fitBounds(activeCloudTrackLine.getBounds());
+
+            closeTrackModal();
+            alert(`Berhasil memuat track "${track.name}" ke peta!`);
+        }
+
+        function deleteCloudTrack(trackId) {
+            if (!isAdminLoggedIn) return;
+            if (confirm("Apakah Anda yakin ingin menghapus rekaman track ini dari database?")) {
+                rtdb.ref('saved_tracks/' + trackId).remove().then(() => {
+                    alert("Track berhasil dihapus.");
                 });
+            }
+        }
+
+        function listenSavedTracks() {
+            rtdb.ref('saved_tracks').on('value', (snapshot) => {
+                savedTracksList = [];
+                const data = snapshot.val();
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        savedTracksList.push({ id: key, ...data[key] });
+                    });
+                }
+                renderSavedTracksUI();
             });
         }
 
-        window.addEventListener('beforeunload', () => {
-            if (myUserId) {
-                rtdb.ref('online_users/' + myUserId).remove();
+        function renderSavedTracksUI() {
+            const container = document.getElementById('savedTracksContainer');
+            const countBadge = document.getElementById('savedTrackCount');
+            if (!container) return;
+
+            container.innerHTML = '';
+            countBadge.innerText = `${savedTracksList.length} Track`;
+
+            if (savedTracksList.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs">Belum ada track yang tersimpan di database.</div>`;
+                return;
             }
-        });
 
-        function toggleAdminAuth() {
-            if (!isAdminLoggedIn) {
-                const pwd = prompt("Masukkan Password Admin:");
-                if (pwd === null) return;
-                
-                if (pwd === ADMIN_PASSWORD) {
-                    isAdminLoggedIn = true;
-                    document.getElementById('adminAuthText').innerText = "Logout";
-                    document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-red-600 hover:bg-red-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
-                    
-                    document.getElementById('adminUploadBtn').classList.remove('hidden');
-                    document.getElementById('adminUploadBtn').classList.add('flex');
-                    document.getElementById('adminAddLocBtn').classList.remove('hidden');
-                    document.getElementById('adminAddLocBtn').classList.add('flex');
-                    document.getElementById('adminTrackingPanel').classList.remove('hidden');
-                    document.getElementById('removeOverlayBtn').classList.remove('hidden');
-                    document.getElementById('adjustBtn').classList.remove('hidden');
-                    
-                    alert("Berhasil masuk sebagai Admin!");
-                } else {
-                    alert("Password salah!");
-                }
-            } else {
-                isAdminLoggedIn = false;
-                document.getElementById('adminAuthText').innerText = "Admin";
-                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
-                
-                document.getElementById('adminUploadBtn').classList.add('hidden');
-                document.getElementById('adminUploadBtn').classList.remove('flex');
-                document.getElementById('adminAddLocBtn').classList.add('hidden');
-                document.getElementById('adminAddLocBtn').classList.remove('flex');
-                document.getElementById('adminTrackingPanel').classList.add('hidden');
-                document.getElementById('removeOverlayBtn').classList.add('hidden');
-                document.getElementById('adjustBtn').classList.add('hidden');
-
-                if (isAdjusting) toggleAdjustMode();
-
-                alert("Anda telah keluar dari mode Admin.");
-            }
+            savedTracksList.forEach(track => {
+                const item = document.createElement('div');
+                item.className = "bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col gap-2 shadow-sm hover:border-slate-300 transition";
+                item.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h5 class="font-bold text-xs text-slate-800">${track.name}</h5>
+                            <p class="text-[10px] text-slate-500">Oleh: <span class="font-semibold text-slate-700">${track.uploader || 'Anonim'}</span> | Durasi: <span class="font-mono font-semibold text-sky-600">${track.duration}</span></p>
+                        </div>
+                        <span class="text-[10px] bg-purple-100 text-purple-700 font-semibold px-2 py-0.5 rounded">Tersimpan</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+                        <button onclick="loadTrackToMap('${track.id}')" class="flex-1 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition">
+                            <i data-lucide="map" class="w-3.5 h-3.5"></i> Load ke Peta
+                        </button>
+                        <button onclick="downloadCloudTrackAsKML('${track.id}')" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium flex items-center justify-center gap-1 transition" title="Download KML">
+                            <i data-lucide="download" class="w-3.5 h-3.5"></i> KML
+                        </button>
+                        <button onclick="deleteCloudTrack('${track.id}')" class="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium flex items-center justify-center transition" title="Hapus">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
             lucide.createIcons();
-            renderMarkers();
-            renderList();
         }
 
         function triggerCamera() {
@@ -889,14 +922,246 @@
                     imageData: photoDataUrl,
                     lat: currentPos[0],
                     lng: currentPos[1],
-                    timestamp: timestamp
+                    timestamp: timestamp,
+                    uploader: myUserName || 'Anonim'
                 };
 
                 rtdb.ref('captured_photos/' + photoId).set(newPhoto).then(() => {
-                    alert("Foto berhasil diambil dan disimpan ke Cloud!");
+                    alert("✅ Foto berhasil diambil dan tersimpan otomatis ke database Firebase!");
+                }).catch((error) => {
+                    alert("❌ Gagal menyimpan foto: " + error.message);
                 });
             };
             reader.readAsDataURL(file);
+        }
+
+        const FONNTE_TOKEN = "JP3JdqHBma7fgxy88MqT";
+        const GROUP_ID = "120363429913153999@g.us";
+        let pasutTimer = null;
+
+        function openPasutModal() {
+            document.getElementById('pasutTerakhir').value = '';
+            document.getElementById('pasutSaatIni').value = '';
+            updatePasutLiveTime();
+            if (pasutTimer) clearInterval(pasutTimer);
+            pasutTimer = setInterval(updatePasutLiveTime, 1000);
+            document.getElementById('pasutModal').classList.remove('hidden');
+        }
+
+        function closePasutModal() {
+            if (pasutTimer) clearInterval(pasutTimer);
+            document.getElementById('pasutModal').classList.add('hidden');
+        }
+
+        function updatePasutLiveTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
+            const liveElem = document.getElementById('pasutLiveTime');
+            if (liveElem) liveElem.innerText = timeStr;
+        }
+
+        async function sendPasutReportToFonnte(e) {
+    e.preventDefault();
+    const pasutTerakhir = document.getElementById('pasutTerakhir').value.trim();
+    const pasutSaatIni = document.getElementById('pasutSaatIni').value.trim();
+    const timestampStr = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
+
+    // Format koordinat GPS hanya menampilkan Latitude & Longitude
+    let gpsLocationText = currentPos ? `${currentPos[0].toFixed(6)}, ${currentPos[1].toFixed(6)}` : "GPS belum terdeteksi";
+
+    const message = ` *LAPORAN PASANGAN SURUT (PASUT)*\n\n` +
+                    ` *Pelapor:* ${myUserName || 'Anonim'}\n` +
+                    ` *Waktu Pengisian:* ${timestampStr}\n` +
+                    ` *Nilai Pasut Terakhir:* ${pasutTerakhir}\n` +
+                    ` *Nilai Pasut Saat Ini:* ${pasutSaatIni}\n` +
+                    ` *Koordinat GPS:* ${gpsLocationText}\n\n` +
+                    `_Pesan dikirim otomatis melalui laporan website!._`;
+
+    try {
+        const response = await fetch('https://api.fonnte.com/send', {
+            method: 'POST',
+            headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ target: GROUP_ID, message: message })
+        });
+        const result = await response.json();
+        if (result.status) {
+            alert('✅ Laporan Pasut berhasil dikirim ke Grup WhatsApp!');
+            document.getElementById('pasutForm').reset();
+            closePasutModal();
+        } else {
+            alert('❌ Gagal mengirim: ' + (result.reason || 'Periksa Token/Group ID Fonnte'));
+        }
+    } catch (error) {
+        alert('⚠️ Terjadi kesalahan koneksi ke server Fonnte.');
+    }
+}
+
+        function submitToken(e) {
+            e.preventDefault();
+            const tokenInput = document.getElementById('inputToken').value.trim().toUpperCase();
+            
+            if (VALID_TOKENS[tokenInput]) {
+                verifyTokenDevice(tokenInput);
+            } else {
+                alert("❌ Token tidak valid! Silakan periksa kembali token yang dimasukkan.");
+            }
+        }
+
+        function requestGPSPermission() {
+            const statusMsg = document.getElementById('gpsStatusMessage');
+            const statusDot = document.getElementById('gpsStatusDot');
+            document.getElementById('gpsLockOverlay').classList.remove('hidden');
+            
+            if (!("geolocation" in navigator)) {
+                statusMsg.innerText = "Browser Anda tidak mendukung Geolocation GPS.";
+                statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+                return;
+            }
+
+            statusMsg.innerText = "Mengunci sinyal GPS presisi tinggi (target ≤ 5 meter)...";
+            statusDot.className = "w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping";
+
+            const geoOptions = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+                    currentPos = [lat, lng];
+
+                    document.getElementById('gpsAccuracy').innerText = `Akurasi: ±${Math.round(accuracy)}m`;
+
+                    if (!isGpsUnlocked) {
+                        isGpsUnlocked = true;
+                        document.getElementById('gpsLockOverlay').classList.add('hidden');
+                        setTimeout(() => {
+                            map.invalidateSize();
+                            map.setView([lat, lng], 18);
+                        }, 300);
+                    }
+
+                    if (myUserToken) {
+                        rtdb.ref('active_tokens/' + myUserToken).update({ lastActive: Date.now() });
+                    }
+
+                    rtdb.ref('online_users/' + myUserId).set({
+                        id: myUserId, name: myUserName, lat: lat, lng: lng, color: myColor, lastActive: Date.now()
+                    });
+
+                    if (isRecordingTrack) {
+                        if (pathCoords.length === 0 || getDistance(pathCoords[pathCoords.length - 1], [lat, lng]) > 1) {
+                            pathCoords.push([lat, lng]);
+                            userPathLine.setLatLngs(pathCoords);
+                        }
+                    }
+
+                    if (userMarker) map.removeLayer(userMarker);
+                    if (userCircle) map.removeLayer(userCircle);
+
+                    userMarker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'user-location-pin',
+                            html: `<div style="background-color: ${myColor}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;" title="${myUserName} (Saya)"></div>`,
+                            iconSize: [16, 16], iconAnchor: [8, 8]
+                        })
+                    }).addTo(map).bindPopup(`<b>${myUserName} (Anda)</b><br><span class="text-[10px] text-slate-500 font-mono">${lat.toFixed(6)}, ${lng.toFixed(6)}</span>`);
+
+                    userCircle = L.circle([lat, lng], {
+                        radius: accuracy, color: myColor, fillColor: myColor, fillOpacity: 0.15, weight: 1
+                    }).addTo(map);
+
+                    if (activeNavTarget && isNavLineActive) {
+                        drawNavigationLine();
+                    }
+                },
+                (error) => {
+                    isGpsUnlocked = false;
+                    document.getElementById('gpsLockOverlay').classList.add('hidden');
+                    statusDot.className = "w-2.5 h-2.5 bg-red-500 rounded-full";
+                    statusMsg.innerText = "Sinyal GPS lemah atau akses ditolak.";
+                },
+                geoOptions
+            );
+        }
+
+        function listenOnlineUsers() {
+            rtdb.ref('online_users').on('value', (snapshot) => {
+                onlineUsersGroup.clearLayers();
+                const data = snapshot.val();
+                if (!data) return;
+                const now = Date.now();
+                Object.keys(data).forEach(uid => {
+                    const usr = data[uid];
+                    if (uid === myUserId) return;
+                    if (now - usr.lastActive > 120000) {
+                        rtdb.ref('online_users/' + uid).remove();
+                        return;
+                    }
+                    const otherUserIcon = L.divIcon({
+                        className: 'user-location-pin',
+                        html: `<div style="background-color: ${usr.color || '#ff0000'}; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white;"></div>`,
+                        iconSize: [16, 16], iconAnchor: [8, 8]
+                    });
+                    const otherMarker = L.marker([usr.lat, usr.lng], { icon: otherUserIcon });
+                    otherMarker.bindPopup(`<b>${usr.name}</b><br><span class="text-[10px] text-slate-500 font-mono">${usr.lat.toFixed(6)}, ${usr.lng.toFixed(6)}</span>`);
+                    onlineUsersGroup.addLayer(otherMarker);
+                });
+            });
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (myUserId) rtdb.ref('online_users/' + myUserId).remove();
+            if (myUserToken) rtdb.ref('active_tokens/' + myUserToken).remove();
+        });
+
+        function toggleAdminAuth() {
+            if (!isAdminLoggedIn) {
+                const pwd = prompt("Masukkan Password Admin:");
+                if (pwd === null) return;
+                if (pwd === ADMIN_PASSWORD) {
+                    isAdminLoggedIn = true;
+                    document.getElementById('adminAuthText').innerText = "Logout";
+                    document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-red-600 hover:bg-red-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
+                    
+                    document.getElementById('adminUploadBtn').classList.remove('hidden');
+                    document.getElementById('adminUploadBtn').classList.add('flex');
+                    document.getElementById('adminAddLocBtn').classList.remove('hidden');
+                    document.getElementById('adminAddLocBtn').classList.add('flex');
+                    document.getElementById('removeOverlayBtn').classList.remove('hidden');
+                    document.getElementById('adjustBtn').classList.remove('hidden');
+                    
+                    // Tampilkan bagian Riwayat Track khusus Admin
+                    document.getElementById('adminHistorySection').classList.remove('hidden');
+                    document.getElementById('userHistoryNotice').classList.add('hidden');
+
+                    alert("Berhasil masuk sebagai Admin!");
+                } else {
+                    alert("Password salah!");
+                }
+            } else {
+                isAdminLoggedIn = false;
+                document.getElementById('adminAuthText').innerText = "Admin";
+                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
+                
+                document.getElementById('adminUploadBtn').classList.add('hidden');
+                document.getElementById('adminUploadBtn').classList.remove('flex');
+                document.getElementById('adminAddLocBtn').classList.add('hidden');
+                document.getElementById('adminAddLocBtn').classList.remove('flex');
+                document.getElementById('removeOverlayBtn').classList.add('hidden');
+                document.getElementById('adjustBtn').classList.add('hidden');
+
+                // Sembunyikan bagian Riwayat Track bagi non-admin
+                document.getElementById('adminHistorySection').classList.add('hidden');
+                document.getElementById('userHistoryNotice').classList.remove('hidden');
+
+                if (isAdjusting) toggleAdjustMode();
+                alert("Anda telah keluar dari mode Admin.");
+            }
+            lucide.createIcons();
+            renderMarkers();
+            renderList();
+            renderGalleryGrid();
         }
 
         function listenCloudPhotos() {
@@ -904,9 +1169,7 @@
                 photos = [];
                 const data = snapshot.val();
                 if (data) {
-                    Object.keys(data).forEach(key => {
-                        photos.push({ id: key, ...data[key] });
-                    });
+                    Object.keys(data).forEach(key => { photos.push({ id: key, ...data[key] }); });
                 }
                 document.getElementById('photoBadge').innerText = photos.length;
                 renderPhotoMarkersOnMap();
@@ -920,23 +1183,18 @@
                 const photoIcon = L.divIcon({
                     className: 'photo-pin',
                     html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-md bg-cover bg-center overflow-hidden" style="background-image: url('${photo.imageData}');"></div>`,
-                    iconSize: [32, 32],
-                    iconAnchor: [16, 16]
+                    iconSize: [32, 32], iconAnchor: [16, 16]
                 });
-
                 const marker = L.marker([photo.lat, photo.lng], { icon: photoIcon });
-                let popupHtml = `
-                    <div class="p-1 max-w-[200px]">
-                        <img src="${photo.imageData}" class="w-full h-28 object-cover rounded mb-2">
-                        <p class="text-[10px] text-slate-500 mb-1">${photo.timestamp}</p>
-                        <div class="flex gap-2">
-                            <a href="${photo.imageData}" download="Foto_${photo.id}.jpg" class="text-xs bg-indigo-600 text-white px-2 py-1 rounded">Download</a>
-                `;
-                if (isAdminLoggedIn) {
-                    popupHtml += `<button onclick="deletePhoto('${photo.id}')" class="text-xs text-red-600 font-medium">Hapus</button>`;
-                }
-                popupHtml += `</div></div>`;
-                marker.bindPopup(popupHtml);
+                
+                let deleteBtnHtml = isAdminLoggedIn ? `<button onclick="deletePhoto('${photo.id}')" class="mt-2 w-full text-[11px] bg-red-600 hover:bg-red-700 text-white font-medium py-1 rounded transition">Hapus Foto</button>` : '';
+
+                marker.bindPopup(`<div class="p-1 max-w-[200px]">
+                    <img src="${photo.imageData}" class="w-full h-28 object-cover rounded mb-2">
+                    <p class="text-[10px] text-slate-500 mb-1">${photo.timestamp}</p>
+                    <a href="${photo.imageData}" download="Foto_${photo.timestamp}.jpg" class="w-full text-center block text-[11px] bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1 rounded transition">Download Foto</a>
+                    ${deleteBtnHtml}
+                </div>`);
                 photoMarkersGroup.addLayer(marker);
             });
         }
@@ -953,32 +1211,34 @@
         function renderGalleryGrid() {
             const container = document.getElementById('galleryContainer');
             container.innerHTML = '';
-
             if (photos.length === 0) {
                 container.innerHTML = `<div class="col-span-full text-center py-12 text-slate-400 text-sm">Belum ada foto yang diambil.</div>`;
                 return;
             }
-
             photos.forEach(photo => {
                 const card = document.createElement('div');
                 card.className = "bg-slate-50 rounded-lg border border-slate-200 overflow-hidden shadow-sm flex flex-col";
+                
+                let deleteButtonHtml = isAdminLoggedIn ? `
+                    <button onclick="deletePhoto('${photo.id}')" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-medium transition" title="Hapus Foto">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                ` : '';
+
                 card.innerHTML = `
                     <div class="h-40 bg-slate-200 overflow-hidden relative group">
                         <img src="${photo.imageData}" class="w-full h-full object-cover">
-                        <button onclick="focusPhotoOnMap(${photo.lat}, ${photo.lng})" class="absolute top-2 right-2 bg-slate-900/80 text-white p-1.5 rounded-full hover:bg-slate-900 transition">
-                            <i data-lucide="crosshair" class="w-4 h-4"></i>
-                        </button>
                     </div>
                     <div class="p-3 flex justify-between items-center bg-white border-t border-slate-100">
                         <div>
                             <p class="text-[11px] font-semibold text-slate-700">${photo.timestamp}</p>
-                            <p class="text-[10px] text-slate-400">${photo.lat.toFixed(5)}, ${photo.lng.toFixed(5)}</p>
+                            <p class="text-[10px] text-slate-400">Oleh: ${photo.uploader || 'Anonim'}</p>
                         </div>
-                        <div class="flex items-center gap-1">
-                            <a href="${photo.imageData}" download="Foto_AvanzaMaps_${photo.id}.jpg" class="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-md transition" title="Download Foto">
-                                <i data-lucide="download" class="w-4 h-4"></i>
+                        <div class="flex items-center gap-1.5">
+                            <a href="${photo.imageData}" download="Foto_${photo.timestamp}.jpg" class="p-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-xs font-medium transition" title="Download Foto">
+                                <i data-lucide="download" class="w-3.5 h-3.5"></i>
                             </a>
-                            ${isAdminLoggedIn ? `<button onclick="deletePhoto('${photo.id}')" class="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-md transition" title="Hapus Foto"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                            ${deleteButtonHtml}
                         </div>
                     </div>
                 `;
@@ -987,32 +1247,29 @@
             lucide.createIcons();
         }
 
-        function focusPhotoOnMap(lat, lng) {
-            closeGalleryModal();
-            map.flyTo([lat, lng], 18);
-        }
-
         function deletePhoto(photoId) {
-            if (confirm("Apakah Anda yakin ingin menghapus foto ini?")) {
-                rtdb.ref('captured_photos/' + photoId).remove();
+            if (!isAdminLoggedIn) return;
+            if (confirm("Apakah Anda yakin ingin menghapus foto ini dari database?")) {
+                rtdb.ref('captured_photos/' + photoId).remove().then(() => {
+                    alert("Foto berhasil dihapus.");
+                });
             }
         }
 
         function recenterToUserLocation() {
-            if (currentPos) {
-                map.flyTo(currentPos, 18, { animate: true, duration: 1.5 });
-            } else {
-                alert("Posisi GPS belum terdeteksi.");
-            }
+            if (currentPos) map.flyTo(currentPos, 18, { animate: true, duration: 1.5 });
+            else alert("Posisi GPS belum terdeteksi.");
         }
 
-        function toggleTrackingRecording() {
+        async function toggleTrackingRecording() {
             const btn = document.getElementById('toggleTrackBtn');
             const saveBtn = document.getElementById('saveTrackBtn');
 
             if (!isRecordingTrack) {
                 isRecordingTrack = true;
-                btn.innerHTML = `<i data-lucide="square" class="w-3.5 h-3.5"></i> Berhenti Track`;
+                await requestWakeLock();
+
+                btn.innerHTML = `<i data-lucide="square" class="w-4 h-4"></i> Berhenti Track`;
                 btn.classList.replace('bg-emerald-600', 'bg-red-600');
                 btn.classList.replace('hover:bg-emerald-700', 'hover:bg-red-700');
 
@@ -1020,11 +1277,12 @@
                     secondsElapsed++;
                     document.getElementById('timerDisplay').innerText = formatTimer(secondsElapsed);
                 }, 1000);
-
             } else {
                 isRecordingTrack = false;
+                releaseWakeLock();
                 clearInterval(timerInterval);
-                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> Lanjut Track`;
+
+                btn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i> Lanjut Track`;
                 btn.classList.replace('bg-red-600', 'bg-emerald-600');
                 btn.classList.replace('hover:bg-red-700', 'hover:bg-emerald-700');
 
@@ -1048,6 +1306,7 @@
         function resetTrackingPath() {
             if (confirm("Reset seluruh lintasan tracking dan timer?")) {
                 isRecordingTrack = false;
+                releaseWakeLock();
                 clearInterval(timerInterval);
                 secondsElapsed = 0;
                 pathCoords = [];
@@ -1056,28 +1315,30 @@
                 document.getElementById('timerDisplay').innerText = "00:00:00";
                 
                 const btn = document.getElementById('toggleTrackBtn');
-                btn.innerHTML = `<i data-lucide="play" class="w-3.5 h-3.5"></i> Mulai Track`;
-                btn.className = "text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded font-medium flex items-center justify-center gap-1 transition shadow-sm";
+                btn.innerHTML = `<i data-lucide="play" class="w-4 h-4"></i> Mulai Track`;
+                btn.className = "text-xs bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 transition shadow-sm";
 
                 const saveBtn = document.getElementById('saveTrackBtn');
                 saveBtn.disabled = true;
-                saveBtn.className = "w-full text-xs bg-slate-300 text-slate-500 py-1.5 rounded font-medium flex items-center justify-center gap-1 cursor-not-allowed transition";
+                saveBtn.className = "text-xs bg-slate-300 text-slate-500 py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 cursor-not-allowed transition";
                 lucide.createIcons();
             }
         }
 
+        /* SIMPAN TRACK BISA DIGUNAKAN OLEH SEMUA USER */
         function saveCurrentTrack() {
             if (pathCoords.length === 0) {
                 alert("Tidak ada lintasan koordinat yang bisa disimpan.");
                 return;
             }
 
-            const trackName = prompt("Masukkan nama rekaman lintasan ini:", `Track - ${new Date().toLocaleString('id-ID')}`);
+            const trackName = prompt("Masukkan nama rekaman lintasan ini:", `Track ${myUserName} - ${new Date().toLocaleString('id-ID')}`);
             if (!trackName) return;
 
             const trackId = Date.now().toString();
             const trackData = {
                 name: trackName,
+                uploader: myUserName || 'Anonim',
                 duration: formatTimer(secondsElapsed),
                 totalSeconds: secondsElapsed,
                 coordinates: pathCoords,
@@ -1085,9 +1346,10 @@
             };
 
             rtdb.ref('saved_tracks/' + trackId).set(trackData).then(() => {
-                alert(`Lintasan "${trackName}" berhasil disimpan ke Cloud!\nDurasi: ${formatTimer(secondsElapsed)}`);
+                alert(`✅ Lintasan "${trackName}" berhasil disimpan ke database Cloud!`);
+                closeTrackModal();
             }).catch((err) => {
-                alert("Gagal menyimpan ke Cloud: " + err.message);
+                alert("❌ Gagal menyimpan ke Cloud: " + err.message);
             });
         }
 
@@ -1106,9 +1368,7 @@
                 locations = [];
                 const data = snapshot.val();
                 if (data) {
-                    Object.keys(data).forEach(key => {
-                        locations.push({ id: key, ...data[key] });
-                    });
+                    Object.keys(data).forEach(key => { locations.push({ id: key, ...data[key] }); });
                 }
                 renderMarkers();
                 renderList();
@@ -1149,10 +1409,8 @@
                 trackBounds = [[center.lat - 0.005, center.lng - 0.008], [center.lat + 0.005, center.lng + 0.008]];
             }
             trackOverlay = L.imageOverlay(imageUrl, trackBounds, { opacity: 0.7, interactive: true }).addTo(map);
-            
             document.getElementById('trackControlPanel').classList.remove('hidden');
             fitTrackBounds();
-
             rtdb.ref('track_overlay').set({ imageUrl: imageUrl, bounds: trackBounds });
         }
 
@@ -1290,13 +1548,17 @@
             document.getElementById('locationForm').reset();
             if (loc) {
                 document.getElementById('modalTitle').innerText = 'Edit Lokasi';
-                document.getElementById('locId').value = loc.id; document.getElementById('locName').value = loc.name;
-                document.getElementById('locCategory').value = loc.category; document.getElementById('locColor').value = loc.color;
-                document.getElementById('locLat').value = loc.lat; document.getElementById('locLng').value = loc.lng;
+                document.getElementById('locId').value = loc.id; 
+                document.getElementById('locName').value = loc.name;
+                document.getElementById('locCategory').value = loc.category; 
+                document.getElementById('locColor').value = loc.color;
+                document.getElementById('locLat').value = loc.lat; 
+                document.getElementById('locLng').value = loc.lng;
                 document.getElementById('locDesc').value = loc.desc || '';
             } else {
                 document.getElementById('modalTitle').innerText = 'Tambah Lokasi Baru';
-                document.getElementById('locId').value = ''; document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
+                document.getElementById('locId').value = ''; 
+                document.getElementById('locLat').value = lat ? lat.toFixed(6) : '';
                 document.getElementById('locLng').value = lng ? lng.toFixed(6) : '';
             }
             document.getElementById('locationModal').classList.remove('hidden');
@@ -1316,7 +1578,6 @@
                 lng: parseFloat(document.getElementById('locLng').value),
                 desc: document.getElementById('locDesc').value
             };
-
             rtdb.ref('locations/' + id).set(newLoc).then(() => closeModal());
         }
 
