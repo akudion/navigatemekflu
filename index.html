@@ -45,18 +45,11 @@
             width: 90%;
             max-width: 380px;
         }
-        /* Tombol Satelit dipindah & dirapikan di pojok kanan atas peta */
-        #floatingSatelliteBtn {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            z-index: 1005;
-        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
 
-    <!-- OVERLAY WAJIB MASUKKAN TOKEN -->
+    <!-- OVERLAY WAJIB MASUKKAN TOKEN (Type Password agar aman dari spoiler) -->
     <div id="nameModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-center p-4 text-center hidden">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
@@ -65,7 +58,7 @@
             <h2 class="text-xl font-bold text-slate-800 mb-2">Avanza Spatial Maps</h2>
             <p class="text-sm text-slate-600 mb-6">Silakan masukkan **Token Akses Kelompok** Anda (Setiap token khusus 1 Perangkat):</p>
             <form onsubmit="submitToken(event)" class="space-y-4">
-                <input type="text" id="inputToken" required placeholder="Contoh: AVZ-X7K2 atau AVZ-ADMIN" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono font-bold uppercase tracking-wider">
+                <input type="password" id="inputToken" required placeholder="Masukkan Token Anda" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono font-bold uppercase tracking-wider">
                 <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition shadow flex items-center justify-center gap-2">
                     Masuk ke Peta <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
@@ -123,7 +116,6 @@
     <!-- Header Navbar -->
     <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-3 sm:px-4 shadow-md z-[1000]">
         <div class="flex items-center space-x-2 sm:space-x-3">
-            <!-- Tombol Hamburger Diperbaiki (Menggunakan fungsi toggleSidebar yang aman) -->
             <button onclick="toggleSidebar()" class="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition active:scale-95">
                 <i data-lucide="menu" class="w-5 h-5"></i>
             </button>
@@ -135,7 +127,6 @@
                 <p class="text-[10px] sm:text-[11px] text-slate-400">Login: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
             </div>
         </div>
-        <!-- Tombol Header Dibuat Ringkas untuk Mobile -->
         <div class="flex items-center space-x-1.5 sm:space-x-2">
             <button id="userTrackMenuBtn" onclick="openTrackModal()" class="flex items-center space-x-1 text-[11px] sm:text-xs bg-sky-600 hover:bg-sky-700 text-white px-2 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="compass" class="w-4 h-4"></i>
@@ -168,7 +159,7 @@
 
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
-        <!-- Sidebar responsif (bisa dibuka-tutup di HP & Desktop) -->
+        <!-- Sidebar responsif -->
         <aside class="w-72 sm:w-80 bg-white border-r border-slate-200 flex flex-col z-[800] shadow-2xl absolute md:relative h-full transition-transform duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
             
             <div class="p-3 bg-slate-900 text-white flex justify-between items-center md:hidden shrink-0">
@@ -186,9 +177,15 @@
                 <span id="gpsAccuracy" class="text-[10px] font-bold text-blue-700">Mencari...</span>
             </div>
 
-            <div class="p-3 bg-sky-50 border-b border-sky-200 shrink-0">
+            <!-- Tombol Navigasi & Satelit di dalam Sidebar -->
+            <div class="p-3 bg-sky-50 border-b border-sky-200 space-y-2 shrink-0">
                 <button onclick="recenterToUserLocation(); if(window.innerWidth < 768) toggleSidebar();" class="w-full text-xs bg-sky-600 hover:bg-sky-700 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
                     <i data-lucide="crosshair" class="w-4 h-4"></i> Tengahkan Posisi Saya
+                </button>
+                <!-- TOMBOL SATELIT DIPINDAH DI BAWAH TENGAHKAN POSISI SAYA -->
+                <button onclick="toggleMapLayer(); if(window.innerWidth < 768) toggleSidebar();" class="w-full text-xs bg-slate-800 hover:bg-slate-900 text-white py-2 rounded font-medium flex items-center justify-center gap-1.5 transition shadow-sm">
+                    <i data-lucide="layers" class="w-4 h-4 text-blue-400"></i>
+                    <span id="satelliteBtnText">Satelit: OFF</span>
                 </button>
             </div>
 
@@ -241,12 +238,6 @@
 
         <!-- Peta Utama -->
         <main class="flex-1 relative">
-            <!-- Tombol Satelit dipindah ke pojok kanan atas dengan styling yang rapi dan ukuran pas di HP -->
-            <button id="floatingSatelliteBtn" onclick="toggleMapLayer()" class="bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl shadow-lg border border-slate-300 flex items-center gap-1.5 sm:gap-2 text-xs transition transform active:scale-95">
-                <i data-lucide="layers" class="w-4 h-4 text-blue-600"></i>
-                <span id="satelliteBtnText">Satelit: OFF</span>
-            </button>
-
             <div id="map"></div>
         </main>
     </div>
@@ -576,7 +567,6 @@
             renderGalleryGrid();
         }
 
-        // Fungsi Toggle Sidebar diperbaiki agar responsif dan aman dipanggil
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             if (sidebar.classList.contains('-translate-x-full')) {
@@ -629,7 +619,6 @@
 
         let isSatelliteActive = false;
         function toggleMapLayer() {
-            const btn = document.getElementById('floatingSatelliteBtn');
             const txt = document.getElementById('satelliteBtnText');
 
             if (!isSatelliteActive) {
@@ -637,13 +626,11 @@
                 satelliteLayer.addTo(map);
                 isSatelliteActive = true;
                 txt.innerText = "Satelit: ON";
-                btn.className = "bg-slate-900 text-white font-semibold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl shadow-lg border border-slate-700 flex items-center gap-1.5 sm:gap-2 text-xs transition transform active:scale-95";
             } else {
                 map.removeLayer(satelliteLayer);
                 googleStreets.addTo(map);
                 isSatelliteActive = false;
                 txt.innerText = "Satelit: OFF";
-                btn.className = "bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl shadow-lg border border-slate-300 flex items-center gap-1.5 sm:gap-2 text-xs transition transform active:scale-95";
             }
             lucide.createIcons();
         }
