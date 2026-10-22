@@ -55,7 +55,7 @@
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
                 <i data-lucide="key" class="w-8 h-8"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Avanza Spatial Maps</h2>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Mekanika Fluida</h2>
             <p class="text-sm text-slate-600 mb-6">Silakan masukkan **Token Akses Kelompok** Anda (Setiap token khusus 1 Perangkat):</p>
             <form onsubmit="submitToken(event)" class="space-y-4">
                 <input type="password" id="inputToken" required placeholder="Masukkan Token Anda" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono font-bold uppercase tracking-wider">
@@ -123,7 +123,7 @@
                 <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
             </div>
             <div>
-                <h1 class="font-bold text-sm sm:text-lg leading-tight">Avanza Maps</h1>
+                <h1 class="font-bold text-sm sm:text-lg leading-tight">Mekanika Fluida</h1>
                 <p class="text-[10px] sm:text-[11px] text-slate-400">Login: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
             </div>
         </div>
@@ -469,6 +469,7 @@
 
         const VALID_TOKENS = {
             "AVZ-ADMIN": "Admin System",
+	    "AVZ-DION": "Admin System",
             "AVZ-X7K2": "Kelompok 1",
             "AVZ-M9P4": "Kelompok 2",
             "AVZ-B3R8": "Kelompok 3",
@@ -781,7 +782,7 @@
             let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
-    <name>Rekaman Track Avanza Maps</name>
+    <name>Rekaman Track Maps</name>
     <Placemark>
       <name>Jalur Lintasan</name>
       <LineString>
@@ -959,8 +960,8 @@ ${kmlCoordinates}
             reader.readAsDataURL(file);
         }
 
-        const FONNTE_TOKEN = "TOKEN_FONNTE_ANDA_DISINI";
-        const GROUP_ID = "12036301234567890@g.us";
+        const FONNTE_TOKEN = "JP3JdqHBma7fgxy88MqT";
+        const GROUP_ID = "120363429913153999@g.us";
         let pasutTimer = null;
 
         function openPasutModal() {
@@ -992,13 +993,13 @@ ${kmlCoordinates}
 
             let gpsLocationText = currentPos ? `${currentPos[0].toFixed(6)}, ${currentPos[1].toFixed(6)}` : "GPS belum terdeteksi";
 
-            const message = `🌊 *LAPORAN PASANGAN SURUT (PASUT)*\n\n` +
-                            `👤 *Pelapor:* ${myUserName || 'Anonim'}\n` +
-                            `📅 *Waktu Pengisian:* ${timestampStr}\n` +
-                            `📉 *Nilai Pasut Terakhir:* ${pasutTerakhir}\n` +
-                            `📈 *Nilai Pasut Saat Ini:* ${pasutSaatIni}\n` +
+            const message = ` *LAPORAN PASANGAN SURUT (PASUT)*\n\n` +
+                            ` *Pelapor:* ${myUserName || 'Anonim'}\n` +
+                            ` *Waktu Pengisian:* ${timestampStr}\n` +
+                            ` *Nilai Pasut Terakhir:* ${pasutTerakhir}\n` +
+                            ` *Nilai Pasut Saat Ini:* ${pasutSaatIni}\n` +
                             `📍 *Koordinat GPS:* ${gpsLocationText}\n\n` +
-                            `_Pesan dikirim otomatis melalui sistem Avanza Maps._`;
+                            `_Pesan dikirim otomatis melalui laporan Website._`;
 
             try {
                 const response = await fetch('https://api.fonnte.com/send', {
