@@ -42,10 +42,13 @@
             transform: translateX(-50%);
             z-index: 400;
             will-change: auto;
+            width: 90%;
+            max-width: 380px;
         }
+        /* Tombol Satelit dipindah & dirapikan di pojok kanan atas peta */
         #floatingSatelliteBtn {
             position: absolute;
-            bottom: 110px;
+            top: 16px;
             right: 16px;
             z-index: 1005;
         }
@@ -55,14 +58,14 @@
 
     <!-- OVERLAY WAJIB MASUKKAN TOKEN -->
     <div id="nameModal" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[10000] flex flex-col items-center justify-center p-4 text-center hidden">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
+        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600">
                 <i data-lucide="key" class="w-8 h-8"></i>
             </div>
-            <h2 class="text-xl font-bold text-slate-800 mb-2">Praktikum Mekflu Maps</h2>
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Avanza Spatial Maps</h2>
             <p class="text-sm text-slate-600 mb-6">Silakan masukkan **Token Akses Kelompok** Anda (Setiap token khusus 1 Perangkat):</p>
             <form onsubmit="submitToken(event)" class="space-y-4">
-                <input type="text" id="inputToken" required placeholder="Contoh: AVZ-X7K2" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono font-bold uppercase tracking-wider">
+                <input type="text" id="inputToken" required placeholder="Contoh: AVZ-X7K2 atau AVZ-ADMIN" class="w-full border border-slate-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none text-center font-mono font-bold uppercase tracking-wider">
                 <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition shadow flex items-center justify-center gap-2">
                     Masuk ke Peta <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
@@ -72,7 +75,7 @@
 
     <!-- OVERLAY LAYAR TERKUNCI GPS -->
     <div id="gpsLockOverlay" class="fixed inset-0 bg-slate-900/95 backdrop-blur-md z-[9999] flex flex-col items-center justify-center p-4 text-center hidden">
-        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
+        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-slate-200">
             <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 text-blue-600 animate-bounce">
                 <i data-lucide="map-pin-off" id="lockIcon" class="w-8 h-8"></i>
             </div>
@@ -92,24 +95,24 @@
     </div>
 
     <!-- PANEL NAVIGASI BAWAH -->
-    <div id="compassNavPanel" class="hidden bg-slate-900/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 border border-slate-700 max-w-sm w-full mx-auto">
-        <div class="relative w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
-            <span class="absolute top-0.5 text-[10px] font-bold text-slate-300">U</span>
-            <span class="absolute bottom-0.5 text-[10px] font-bold text-slate-300">S</span>
-            <span class="absolute left-1.5 text-[10px] font-bold text-slate-300">B</span>
-            <span class="absolute right-1.5 text-[10px] font-bold text-slate-300">T</span>
+    <div id="compassNavPanel" class="hidden bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700 mx-auto">
+        <div class="relative w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-full flex items-center justify-center border-2 border-slate-600 shrink-0">
+            <span class="absolute top-0.5 text-[9px] font-bold text-slate-300">U</span>
+            <span class="absolute bottom-0.5 text-[9px] font-bold text-slate-300">S</span>
+            <span class="absolute left-1.5 text-[9px] font-bold text-slate-300">B</span>
+            <span class="absolute right-1.5 text-[9px] font-bold text-slate-300">T</span>
             <div id="compassArrow" class="w-full h-full absolute flex items-center justify-center transition-transform duration-300">
-                <i data-lucide="navigation" class="w-6 h-6 text-emerald-400 fill-emerald-400"></i>
+                <i data-lucide="navigation" class="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400 fill-emerald-400"></i>
             </div>
         </div>
         <div class="flex-1 overflow-hidden">
             <div class="flex justify-between items-center">
-                <span class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Tujuan</span>
-                <button onclick="stopNavigation()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <span class="text-[9px] sm:text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Navigasi Tujuan</span>
+                <button onclick="stopNavigation()" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
             <h4 id="navTargetName" class="font-bold text-xs truncate text-white mt-0.5">-</h4>
             <div class="flex justify-between items-center mt-1">
-                <p id="navTargetDistance" class="text-[11px] font-mono text-sky-300">Menghitung...</p>
+                <p id="navTargetDistance" class="text-[10px] sm:text-[11px] font-mono text-sky-300">Menghitung...</p>
                 <button id="toggleLineBtn" onclick="toggleNavigationLine()" class="text-[10px] bg-slate-700 hover:bg-slate-600 text-slate-200 px-2 py-0.5 rounded font-medium transition border border-slate-600">
                     Garis: OFF
                 </button>
@@ -118,45 +121,44 @@
     </div>
 
     <!-- Header Navbar -->
-    <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-4 shadow-md z-[1000]">
-        <div class="flex items-center space-x-3">
-            <button onclick="toggleSidebar()" class="md:hidden p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition">
+    <header class="h-16 bg-slate-900 text-white flex items-center justify-between px-3 sm:px-4 shadow-md z-[1000]">
+        <div class="flex items-center space-x-2 sm:space-x-3">
+            <!-- Tombol Hamburger Diperbaiki (Menggunakan fungsi toggleSidebar yang aman) -->
+            <button onclick="toggleSidebar()" class="p-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition active:scale-95">
                 <i data-lucide="menu" class="w-5 h-5"></i>
             </button>
             <div class="bg-blue-600 p-2 rounded-lg hidden sm:block">
                 <i data-lucide="map-pin" class="w-6 h-6 text-white"></i>
             </div>
             <div>
-                <h1 class="font-bold text-base sm:text-lg leading-none">Praktikum Mekflu Maps</h1>
-                <p class="text-[11px] text-slate-400">Login as: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
+                <h1 class="font-bold text-sm sm:text-lg leading-tight">Avanza Maps</h1>
+                <p class="text-[10px] sm:text-[11px] text-slate-400">Login: <span id="displayUserName" class="text-emerald-400 font-semibold">-</span></p>
             </div>
         </div>
-        <div class="flex items-center space-x-2">
-            <!-- TOMBOL TRACK MENU (DAPAT DILIHAT SEMUA USER) -->
-            <button id="userTrackMenuBtn" onclick="openTrackModal()" class="flex items-center space-x-1 text-xs bg-sky-600 hover:bg-sky-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
+        <!-- Tombol Header Dibuat Ringkas untuk Mobile -->
+        <div class="flex items-center space-x-1.5 sm:space-x-2">
+            <button id="userTrackMenuBtn" onclick="openTrackModal()" class="flex items-center space-x-1 text-[11px] sm:text-xs bg-sky-600 hover:bg-sky-700 text-white px-2 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="compass" class="w-4 h-4"></i>
-                <span>TRACK MENU</span>
+                <span class="hidden md:inline">TRACK MENU</span>
             </button>
 
-            <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
+            <button onclick="openGalleryModal()" class="flex items-center space-x-1 text-[11px] sm:text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-2 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="images" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">Galeri Foto</span>
-                <span id="photoBadge" class="bg-indigo-800 text-white text-[10px] px-1.5 py-0.5 rounded-full ml-1">0</span>
+                <span class="hidden sm:inline">Galeri</span>
+                <span id="photoBadge" class="bg-indigo-800 text-white text-[9px] px-1.5 py-0.5 rounded-full ml-0.5">0</span>
             </button>
 
-            <button id="adminAuthBtn" onclick="toggleAdminAuth()" class="flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow">
+            <button id="adminAuthBtn" onclick="toggleAdminAuth()" class="flex items-center space-x-1 text-[11px] sm:text-xs bg-amber-600 hover:bg-amber-700 text-white px-2 sm:px-3 py-2 rounded-md font-medium transition shadow">
                 <i data-lucide="lock" class="w-4 h-4"></i>
                 <span id="adminAuthText">Admin</span>
             </button>
 
-            <label id="adminUploadBtn" class="hidden items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium cursor-pointer transition shadow">
+            <label id="adminUploadBtn" class="hidden items-center space-x-1 text-xs bg-purple-600 hover:bg-purple-700 text-white px-2.5 py-2 rounded-md font-medium cursor-pointer transition shadow">
                 <i data-lucide="file-up" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">Upload PDF</span>
                 <input type="file" id="uploadTrackFile" accept=".pdf, image/*" class="hidden" onchange="handleTrackUpload(event)">
             </label>
-            <button id="adminAddLocBtn" onclick="openModal()" class="hidden items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition">
+            <button id="adminAddLocBtn" onclick="openModal()" class="hidden items-center space-x-1 text-xs bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-2 rounded-md font-medium transition">
                 <i data-lucide="plus" class="w-4 h-4"></i>
-                <span class="hidden sm:inline">Tambah Titik</span>
             </button>
         </div>
     </header>
@@ -166,7 +168,8 @@
 
     <!-- Main Content Area -->
     <div class="flex-1 flex overflow-hidden relative">
-        <aside class="w-80 bg-white border-r border-slate-200 flex flex-col z-[500] shadow-2xl absolute md:relative h-full transition-transform duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
+        <!-- Sidebar responsif (bisa dibuka-tutup di HP & Desktop) -->
+        <aside class="w-72 sm:w-80 bg-white border-r border-slate-200 flex flex-col z-[800] shadow-2xl absolute md:relative h-full transition-transform duration-300 transform -translate-x-full md:translate-x-0 overflow-y-auto custom-scrollbar" id="sidebar">
             
             <div class="p-3 bg-slate-900 text-white flex justify-between items-center md:hidden shrink-0">
                 <span class="text-xs font-bold">Menu Navigasi & Kontrol</span>
@@ -215,7 +218,7 @@
                     <option value="ALL">Semua Kategori</option>
                     <option value="Cabang">Cabang</option>
                     <option value="Pos Servis">Pos Servis</option>
-                    <option value="Trip">Trip</option>
+                    <option value="Mitra">Mitra</option>
                     <option value="Lainnya">Lainnya</option>
                 </select>
             </div>
@@ -238,7 +241,8 @@
 
         <!-- Peta Utama -->
         <main class="flex-1 relative">
-            <button id="floatingSatelliteBtn" onclick="toggleMapLayer()" class="bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-300 flex items-center gap-2 text-xs transition transform active:scale-95">
+            <!-- Tombol Satelit dipindah ke pojok kanan atas dengan styling yang rapi dan ukuran pas di HP -->
+            <button id="floatingSatelliteBtn" onclick="toggleMapLayer()" class="bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl shadow-lg border border-slate-300 flex items-center gap-1.5 sm:gap-2 text-xs transition transform active:scale-95">
                 <i data-lucide="layers" class="w-4 h-4 text-blue-600"></i>
                 <span id="satelliteBtnText">Satelit: OFF</span>
             </button>
@@ -248,19 +252,18 @@
     </div>
 
     <!-- MODAL POP-UP "TRACK MENU" -->
-    <div id="trackModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10002] flex items-center justify-center hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
-            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shrink-0">
+    <div id="trackModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10002] flex items-center justify-center hidden p-3">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden border border-slate-200 flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-2">
                     <i data-lucide="compass" class="w-5 h-5 text-sky-400"></i>
-                    <h3 class="font-bold text-base">Menu Kelola Track GPS</h3>
+                    <h3 class="font-bold text-sm sm:text-base">Menu Kelola Track GPS</h3>
                 </div>
-                <button onclick="closeTrackModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeTrackModal()" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div class="p-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
-                <!-- Perekaman Real-time (Bisa Digunakan Semua User) -->
-                <div class="bg-sky-50 border border-sky-200 rounded-xl p-4 space-y-3">
+            <div class="p-4 sm:p-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
+                <div class="bg-sky-50 border border-sky-200 rounded-xl p-3 sm:p-4 space-y-3">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-bold text-sky-900 flex items-center gap-1.5">
                             <i data-lucide="navigation-2" class="w-4 h-4 text-sky-600"></i> Rekam Track Baru
@@ -281,7 +284,6 @@
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 pt-1">
-                        <!-- SIMPAN BISA DIGUNAKAN OLEH SEMUA USER -->
                         <button id="saveTrackBtn" onclick="saveCurrentTrack()" disabled class="text-xs bg-slate-300 text-slate-500 py-2 rounded-lg font-medium flex items-center justify-center gap-1.5 cursor-not-allowed transition">
                             <i data-lucide="save" class="w-4 h-4"></i> Simpan ke Cloud
                         </button>
@@ -291,7 +293,6 @@
                     </div>
                 </div>
 
-                <!-- Hasil Rekaman Track Tersimpan (KHUSUS ADMIN) -->
                 <div id="adminHistorySection" class="space-y-3 hidden">
                     <div class="flex justify-between items-center">
                         <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -305,30 +306,29 @@
                     </div>
                 </div>
 
-                <!-- Pesan informasi bagi User Biasa -->
                 <div id="userHistoryNotice" class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs flex items-center gap-2">
                     <i data-lucide="info" class="w-4 h-4 shrink-0 text-amber-600"></i>
                     <span>Track yang Anda simpan telah terkirim ke Cloud. Daftar riwayat track tersimpan hanya dapat dikelola oleh **Admin**.</span>
                 </div>
             </div>
 
-            <div class="p-4 bg-slate-50 border-t border-slate-200 text-right shrink-0">
+            <div class="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 text-right shrink-0">
                 <button onclick="closeTrackModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-medium transition">Tutup Menu</button>
             </div>
         </div>
     </div>
 
     <!-- MODAL POP-UP LAPORAN PASUT -->
-    <div id="pasutModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10001] flex items-center justify-center hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-200">
-            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+    <div id="pasutModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[10001] flex items-center justify-center hidden p-3">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-auto overflow-hidden border border-slate-200">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <i data-lucide="waves" class="w-5 h-5 text-cyan-400"></i>
-                    <h3 class="font-bold text-base">Laporan Pasangan Surut (Pasut)</h3>
+                    <h3 class="font-bold text-sm sm:text-base">Laporan Pasangan Surut (Pasut)</h3>
                 </div>
-                <button onclick="closePasutModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closePasutModal()" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form id="pasutForm" onsubmit="sendPasutReportToFonnte(event)" class="p-6 space-y-4">
+            <form id="pasutForm" onsubmit="sendPasutReportToFonnte(event)" class="p-4 sm:p-6 space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Nilai Pasut Terakhir</label>
                     <input type="text" id="pasutTerakhir" required placeholder="Contoh: 1.5 m atau 150 cm" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-cyan-500 focus:outline-none">
@@ -344,7 +344,7 @@
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closePasutModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50">Batal</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-1.5">
-                        <i data-lucide="send" class="w-4 h-4"></i> Kirim ke WhatsApp via Fonnte
+                        <i data-lucide="send" class="w-4 h-4"></i> Kirim WhatsApp
                     </button>
                 </div>
             </form>
@@ -352,32 +352,32 @@
     </div>
 
     <!-- MODAL POP-UP GALERI FOTO -->
-    <div id="galleryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[85vh]">
-            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+    <div id="galleryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-auto overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-2">
                     <i data-lucide="images" class="w-5 h-5 text-indigo-400"></i>
-                    <h3 class="font-semibold text-base">Galeri Foto Tangkapan</h3>
+                    <h3 class="font-semibold text-sm sm:text-base">Galeri Foto Tangkapan</h3>
                 </div>
-                <button onclick="closeGalleryModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <button onclick="closeGalleryModal()" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
             
-            <div id="galleryContainer" class="p-6 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
+            <div id="galleryContainer" class="p-4 sm:p-6 overflow-y-auto custom-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1"></div>
 
-            <div class="p-4 bg-slate-50 border-t border-slate-200 text-right">
-                <button onclick="closeGalleryModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-sm font-medium">Tutup Galeri</button>
+            <div class="p-3 sm:p-4 bg-slate-50 border-t border-slate-200 text-right">
+                <button onclick="closeGalleryModal()" class="px-4 py-2 bg-slate-700 hover:bg-slate-800 text-white rounded-lg text-xs font-medium">Tutup Galeri</button>
             </div>
         </div>
     </div>
 
     <!-- Modal Form Tambah/Edit Titik -->
-    <div id="locationModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 overflow-hidden">
-            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
-                <h3 class="font-semibold text-base" id="modalTitle">Tambah Lokasi Spasial</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    <div id="locationModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center hidden p-3">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden">
+            <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+                <h3 class="font-semibold text-sm sm:text-base" id="modalTitle">Tambah Lokasi Spasial</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-1"><i data-lucide="x" class="w-5 h-5"></i></button>
             </div>
-            <form id="locationForm" onsubmit="saveLocation(event)" class="p-6 space-y-4">
+            <form id="locationForm" onsubmit="saveLocation(event)" class="p-4 sm:p-6 space-y-4">
                 <input type="hidden" id="locId">
                 <div>
                     <label class="block text-xs font-medium text-slate-700 mb-1">Nama Lokasi</label>
@@ -389,7 +389,7 @@
                         <select id="locCategory" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
                             <option value="Cabang">Cabang</option>
                             <option value="Pos Servis">Pos Servis</option>
-                            <option value="Trip">Trip</option>
+                            <option value="Mitra">Mitra</option>
                             <option value="Lainnya">Lainnya</option>
                         </select>
                     </div>
@@ -477,6 +477,7 @@
         let wakeLock = null;
 
         const VALID_TOKENS = {
+            "AVZ-ADMIN": "Admin System",
             "AVZ-X7K2": "Kelompok 1",
             "AVZ-M9P4": "Kelompok 2",
             "AVZ-B3R8": "Kelompok 3",
@@ -495,10 +496,7 @@
             "AVZ-C1J3": "Kelompok 16",
             "AVZ-N8F2": "Kelompok 17",
             "AVZ-U3Y5": "Kelompok 18",
-            "AVZ-W9K7": "Kelompok 19",
-            "AVZ-0000": "GUEST",
-            "AVZ-1111": "GUEST1"
-	
+            "AVZ-W9K7": "Kelompok 19"
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -547,9 +545,45 @@
 
                     document.getElementById('displayUserName').innerText = myUserName;
                     document.getElementById('nameModal').classList.add('hidden');
+
+                    if (token === "AVZ-ADMIN") {
+                        activateAdminMode();
+                    }
+
                     requestGPSPermission();
                 }
             });
+        }
+
+        function activateAdminMode() {
+            isAdminLoggedIn = true;
+            document.getElementById('adminAuthText').innerText = "Logout";
+            document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-[11px] sm:text-xs bg-red-600 hover:bg-red-700 text-white px-2 sm:px-3 py-2 rounded-md font-medium transition shadow";
+            
+            document.getElementById('adminUploadBtn').classList.remove('hidden');
+            document.getElementById('adminUploadBtn').classList.add('flex');
+            document.getElementById('adminAddLocBtn').classList.remove('hidden');
+            document.getElementById('adminAddLocBtn').classList.add('flex');
+            document.getElementById('removeOverlayBtn').classList.remove('hidden');
+            document.getElementById('adjustBtn').classList.remove('hidden');
+            
+            document.getElementById('adminHistorySection').classList.remove('hidden');
+            document.getElementById('userHistoryNotice').classList.add('hidden');
+
+            lucide.createIcons();
+            renderMarkers();
+            renderList();
+            renderGalleryGrid();
+        }
+
+        // Fungsi Toggle Sidebar diperbaiki agar responsif dan aman dipanggil
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('-translate-x-full')) {
+                sidebar.classList.remove('-translate-x-full');
+            } else {
+                sidebar.classList.add('-translate-x-full');
+            }
         }
 
         function initMap() {
@@ -603,13 +637,13 @@
                 satelliteLayer.addTo(map);
                 isSatelliteActive = true;
                 txt.innerText = "Satelit: ON";
-                btn.className = "bg-slate-900 text-white font-semibold px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs transition transform active:scale-95";
+                btn.className = "bg-slate-900 text-white font-semibold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl shadow-lg border border-slate-700 flex items-center gap-1.5 sm:gap-2 text-xs transition transform active:scale-95";
             } else {
                 map.removeLayer(satelliteLayer);
                 googleStreets.addTo(map);
                 isSatelliteActive = false;
                 txt.innerText = "Satelit: OFF";
-                btn.className = "bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-300 flex items-center gap-2 text-xs transition transform active:scale-95";
+                btn.className = "bg-white hover:bg-slate-50 text-slate-800 font-semibold px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-xl shadow-lg border border-slate-300 flex items-center gap-1.5 sm:gap-2 text-xs transition transform active:scale-95";
             }
             lucide.createIcons();
         }
@@ -760,7 +794,7 @@
             let kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
-    <name>Rekaman Track Maps</name>
+    <name>Rekaman Track Avanza Maps</name>
     <Placemark>
       <name>Jalur Lintasan</name>
       <LineString>
@@ -938,8 +972,8 @@ ${kmlCoordinates}
             reader.readAsDataURL(file);
         }
 
-        const FONNTE_TOKEN = "JP3JdqHBma7fgxy88MqT";
-        const GROUP_ID = "120363429913153999@g.us";
+        const FONNTE_TOKEN = "TOKEN_FONNTE_ANDA_DISINI";
+        const GROUP_ID = "12036301234567890@g.us";
         let pasutTimer = null;
 
         function openPasutModal() {
@@ -964,40 +998,39 @@ ${kmlCoordinates}
         }
 
         async function sendPasutReportToFonnte(e) {
-    e.preventDefault();
-    const pasutTerakhir = document.getElementById('pasutTerakhir').value.trim();
-    const pasutSaatIni = document.getElementById('pasutSaatIni').value.trim();
-    const timestampStr = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
+            e.preventDefault();
+            const pasutTerakhir = document.getElementById('pasutTerakhir').value.trim();
+            const pasutSaatIni = document.getElementById('pasutSaatIni').value.trim();
+            const timestampStr = new Date().toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'medium' });
 
-    // Format koordinat GPS hanya menampilkan Latitude & Longitude
-    let gpsLocationText = currentPos ? `${currentPos[0].toFixed(6)}, ${currentPos[1].toFixed(6)}` : "GPS belum terdeteksi";
+            let gpsLocationText = currentPos ? `${currentPos[0].toFixed(6)}, ${currentPos[1].toFixed(6)}` : "GPS belum terdeteksi";
 
-    const message = ` *LAPORAN PASANGAN SURUT (PASUT)*\n\n` +
-                    ` *Pelapor:* ${myUserName || 'Anonim'}\n` +
-                    ` *Waktu Pengisian:* ${timestampStr}\n` +
-                    ` *Nilai Pasut Terakhir:* ${pasutTerakhir}\n` +
-                    ` *Nilai Pasut Saat Ini:* ${pasutSaatIni}\n` +
-                    ` *Koordinat GPS:* ${gpsLocationText}\n\n` +
-                    `_Pesan dikirim otomatis melalui laporan website!._`;
+            const message = `🌊 *LAPORAN PASANGAN SURUT (PASUT)*\n\n` +
+                            `👤 *Pelapor:* ${myUserName || 'Anonim'}\n` +
+                            `📅 *Waktu Pengisian:* ${timestampStr}\n` +
+                            `📉 *Nilai Pasut Terakhir:* ${pasutTerakhir}\n` +
+                            `📈 *Nilai Pasut Saat Ini:* ${pasutSaatIni}\n` +
+                            `📍 *Koordinat GPS:* ${gpsLocationText}\n\n` +
+                            `_Pesan dikirim otomatis melalui sistem Avanza Maps._`;
 
-    try {
-        const response = await fetch('https://api.fonnte.com/send', {
-            method: 'POST',
-            headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: GROUP_ID, message: message })
-        });
-        const result = await response.json();
-        if (result.status) {
-            alert('✅ Laporan Pasut berhasil dikirim ke Grup WhatsApp!');
-            document.getElementById('pasutForm').reset();
-            closePasutModal();
-        } else {
-            alert('❌ Gagal mengirim: ' + (result.reason || 'Periksa Token/Group ID Fonnte'));
+            try {
+                const response = await fetch('https://api.fonnte.com/send', {
+                    method: 'POST',
+                    headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: GROUP_ID, message: message })
+                });
+                const result = await response.json();
+                if (result.status) {
+                    alert('✅ Laporan Pasut berhasil dikirim ke Grup WhatsApp!');
+                    document.getElementById('pasutForm').reset();
+                    closePasutModal();
+                } else {
+                    alert('❌ Gagal mengirim: ' + (result.reason || 'Periksa Token/Group ID Fonnte'));
+                }
+            } catch (error) {
+                alert('⚠️ Terjadi kesalahan koneksi ke server Fonnte.');
+            }
         }
-    } catch (error) {
-        alert('⚠️ Terjadi kesalahan koneksi ke server Fonnte.');
-    }
-}
 
         function submitToken(e) {
             e.preventDefault();
@@ -1123,21 +1156,7 @@ ${kmlCoordinates}
                 const pwd = prompt("Masukkan Password Admin:");
                 if (pwd === null) return;
                 if (pwd === ADMIN_PASSWORD) {
-                    isAdminLoggedIn = true;
-                    document.getElementById('adminAuthText').innerText = "Logout";
-                    document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-red-600 hover:bg-red-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
-                    
-                    document.getElementById('adminUploadBtn').classList.remove('hidden');
-                    document.getElementById('adminUploadBtn').classList.add('flex');
-                    document.getElementById('adminAddLocBtn').classList.remove('hidden');
-                    document.getElementById('adminAddLocBtn').classList.add('flex');
-                    document.getElementById('removeOverlayBtn').classList.remove('hidden');
-                    document.getElementById('adjustBtn').classList.remove('hidden');
-                    
-                    // Tampilkan bagian Riwayat Track khusus Admin
-                    document.getElementById('adminHistorySection').classList.remove('hidden');
-                    document.getElementById('userHistoryNotice').classList.add('hidden');
-
+                    activateAdminMode();
                     alert("Berhasil masuk sebagai Admin!");
                 } else {
                     alert("Password salah!");
@@ -1145,7 +1164,7 @@ ${kmlCoordinates}
             } else {
                 isAdminLoggedIn = false;
                 document.getElementById('adminAuthText').innerText = "Admin";
-                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-xs bg-amber-600 hover:bg-amber-700 text-white px-2.5 sm:px-3 py-2 rounded-md font-medium transition shadow";
+                document.getElementById('adminAuthBtn').className = "flex items-center space-x-1 text-[11px] sm:text-xs bg-amber-600 hover:bg-amber-700 text-white px-2 sm:px-3 py-2 rounded-md font-medium transition shadow";
                 
                 document.getElementById('adminUploadBtn').classList.add('hidden');
                 document.getElementById('adminUploadBtn').classList.remove('flex');
@@ -1154,7 +1173,6 @@ ${kmlCoordinates}
                 document.getElementById('removeOverlayBtn').classList.add('hidden');
                 document.getElementById('adjustBtn').classList.add('hidden');
 
-                // Sembunyikan bagian Riwayat Track bagi non-admin
                 document.getElementById('adminHistorySection').classList.add('hidden');
                 document.getElementById('userHistoryNotice').classList.remove('hidden');
 
@@ -1328,7 +1346,6 @@ ${kmlCoordinates}
             }
         }
 
-        /* SIMPAN TRACK BISA DIGUNAKAN OLEH SEMUA USER */
         function saveCurrentTrack() {
             if (pathCoords.length === 0) {
                 alert("Tidak ada lintasan koordinat yang bisa disimpan.");
